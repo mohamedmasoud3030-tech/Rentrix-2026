@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: 'Alexandria', 'IBM Plex Sans Arabic', sans-serif;
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-heading: hsl(var(--heading));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-light: hsl(var(--primary-light));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-danger: hsl(var(--danger));
+  --color-danger-foreground: hsl(var(--danger-foreground));
+  --color-success: hsl(var(--success));
+  --color-success-foreground: hsl(var(--success-foreground));
+  --color-warning: hsl(var(--warning));
+  --color-warning-foreground: hsl(var(--warning-foreground));
+  --color-neutral: hsl(var(--neutral));
+  --color-neutral-foreground: hsl(var(--neutral-foreground));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --shadow-brand: var(--shadow-brand);
+  --shadow-brand-lg: var(--shadow-brand-lg);
+}
+
+:root {
+  --primary: 206 74% 46%;
+  --primary-foreground: 210 40% 98%;
+  --primary-light: 205 90% 94%;
+  --background: 38 28% 97%;
+  --foreground: 216 18% 33%;
+  --card: 0 0% 100%;
+  --card-foreground: 218 20% 30%;
+  --heading: 219 26% 18%;
+  --border: 34 19% 86%;
+  --input: 40 28% 95%;
+  --muted-foreground: 218 11% 47%;
+  --success: 159 64% 34%;
+  --success-foreground: 141 94% 97%;
+  --warning: 35 92% 46%;
+  --warning-foreground: 45 93% 96%;
+  --danger: 0 72% 52%;
+  --danger-foreground: 0 86% 97%;
+  --neutral: 36 22% 92%;
+  --neutral-foreground: 218 20% 30%;
+  --radius: 1.125rem;
+  --topbar-height: 64px;
+  --shadow-brand: 0 16px 36px -24px rgb(51 65 85 / 0.12), 0 6px 18px -16px rgb(51 65 85 / 0.08);
+  --shadow-brand-lg: 0 24px 56px -28px rgb(51 65 85 / 0.18), 0 10px 24px -20px rgb(51 65 85 / 0.10);
+}
+
+[data-theme="dark"] {
+  --primary: 198 80% 64%;
+  --primary-foreground: 215 33% 12%;
+  --background: 218 26% 13%;
+  --foreground: 214 18% 79%;
+  --card: 218 22% 16%;
+  --card-foreground: 214 18% 79%;
+  --heading: 42 20% 96%;
+  --border: 216 16% 26%;
+  --input: 217 16% 19%;
+  --muted-foreground: 214 12% 62%;
+  --neutral: 217 15% 22%;
+  --neutral-foreground: 213 16% 72%;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+  background-image:
+    radial-gradient(circle at top right, rgb(14 165 233 / 0.1), transparent 24%),
+    radial-gradient(circle at 12% 20%, rgb(15 23 42 / 0.05), transparent 28%),
+    radial-gradient(circle at bottom left, rgb(245 158 11 / 0.08), transparent 22%),
+    linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0));
+  margin: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+[data-theme="dark"] body {
+  background-image:
+    radial-gradient(circle at top right, rgb(14 165 233 / 0.10), transparent 24%),
+    radial-gradient(circle at 20% 18%, rgb(59 130 246 / 0.05), transparent 22%),
+    radial-gradient(circle at bottom left, rgb(245 158 11 / 0.06), transparent 18%),
+    linear-gradient(180deg, rgba(30,41,59,0.34), rgba(30,41,59,0));
+}
+
+h1, h2, h3, h4, h5, h6 {
+  color: hsl(var(--heading));
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgb(14 165 233 / 0.18);
+}
+
+input, select, textarea {
+  @apply w-full rounded-2xl border border-border bg-white/75 p-3 text-base shadow-sm backdrop-blur-sm transition-all;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
+  @apply min-h-[44px];
+}
+
+[data-theme="dark"] input,
+[data-theme="dark"] select,
+[data-theme="dark"] textarea {
+  @apply bg-slate-900/80;
+}
+
+select {
+  @apply pr-8;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center rounded-2xl text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  @apply h-11 px-6 py-2 active:scale-95 select-none;
+  @apply min-h-[44px];
+}
+
+.btn-primary { @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand; }
+.btn-danger { @apply bg-danger text-danger-foreground hover:bg-danger/90; }
+.btn-warning { @apply bg-warning text-warning-foreground hover:bg-warning/90; }
+.btn-secondary { @apply border border-border bg-card/85 text-heading hover:bg-background; }
+.btn-ghost { @apply text-foreground hover:bg-background/80; }
+.btn-sm { @apply h-9 rounded-md px-3 text-xs min-h-[36px]; }
+
+table { @apply w-full text-sm; }
+th { @apply p-4 text-right text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
+td { @apply border-b border-border p-4; }
+tr:last-child td { @apply border-b-0; }
+tbody tr { @apply transition-colors; }
+tbody tr:hover { @apply bg-background/70; }
+tfoot td { @apply font-bold text-heading; }
+
+.status-pill { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold; }
+
+@media (max-width: 768px) {
+  .responsive-table thead { display: none; }
+  .responsive-table tr {
+    @apply block bg-card mb-4 rounded-xl border border-border p-4 shadow-sm;
+  }
+  .responsive-table td {
+    @apply flex justify-between items-center py-3 border-b border-border/50;
+    @apply text-left;
+  }
+  .responsive-table tr td:last-child { @apply border-0 pb-1; }
+  .responsive-table td::before {
+    content: attr(data-label);
+    @apply font-bold text-sm text-muted-foreground mr-auto;
+    @apply ml-4;
+  }
+  .responsive-table td .btn { @apply py-1 px-3 text-xs min-h-[32px]; }
+  .responsive-table .action-cell, .responsive-table .action-cell > div { @apply opacity-100; }
+}
+
+@media (max-width: 640px) {
+  .modal-content { @apply fixed inset-0 rounded-none max-w-none w-full h-full overflow-y-auto; }
+  .modal-container { @apply p-0; }
+}
+
+#root { min-height: 100vh; display: flex; flex-direction: column; }

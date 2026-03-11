@@ -1,0 +1,51 @@
+{
+  "name": "rentrix-erp",
+  "productName": "Rentrix ERP",
+  "version": "1.2.0",
+  "description": "نظام ادارة مؤسسات شامل لإدارة العقارات لـ 'مشاريع جودة الإنطلاقة'",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "author": "يعقوب فضل الخصيبي",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "@eslint/js": "^9.39.1",
+    "@tailwindcss/postcss": "^4.2.1",
+    "@types/prop-types": "^15.7.15",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.4",
+    "autoprefixer": "^10.4.27",
+    "eslint": "^9.39.3",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.3.0",
+    "postcss": "^8.5.8",
+    "tailwindcss": "^4.2.1",
+    "typescript": "^5.0.0",
+    "typescript-eslint": "^8.56.1",
+    "vite": "^7.3.1",
+    "vite-plugin-pwa": "^1.2.0"
+  },
+  "dependencies": {
+    "@google/genai": "^1.42.0",
+    "@supabase/supabase-js": "^2.98.0",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "framer-motion": "^12.34.3",
+    "i18next": "^25.8.13",
+    "jspdf": "^4.2.0",
+    "jspdf-autotable": "^5.0.7",
+    "lucide-react": "^0.575.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-hot-toast": "^2.6.0",
+    "react-i18next": "^16.5.4",
+    "react-router-dom": "^7.13.1",
+    "tailwind-merge": "^3.5.0"
+  }
+}
