@@ -11,26 +11,26 @@ interface PrintPreviewModalProps {
 }
 
 const ghostButton =
-  'px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-colors';
+  'inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200';
 const primaryButton =
-  'px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors';
+  'inline-flex min-h-[44px] items-center gap-2 rounded-2xl border border-transparent bg-blue-600 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2';
 
 const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, onClose, title, onExportPdf, children }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={title} size="xl">
       <div className="space-y-6">
-        <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-          <div className="min-h-[400px] rounded-lg border border-slate-200 bg-white p-6 shadow-sm">
+        <div className="rounded-[26px] border border-slate-200 bg-slate-50 p-3 sm:p-4">
+          <div className="min-h-[400px] rounded-[22px] border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
             {children}
           </div>
         </div>
-        <div className="flex justify-end gap-3 pt-6 border-t border-slate-200">
-          <button onClick={() => window.print()} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-200 transition-colors">
+        <div className="flex flex-wrap justify-end gap-3 border-t border-slate-200 pt-6">
+          <button onClick={() => window.print()} className={ghostButton}>
             <Printer size={16} />
             طباعة
           </button>
           {onExportPdf && (
-            <button onClick={onExportPdf} className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors">
+            <button onClick={onExportPdf} className={primaryButton}>
               <Download size={16} />
               تصدير PDF
             </button>

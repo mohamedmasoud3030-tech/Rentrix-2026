@@ -66,7 +66,6 @@ const navGroups: NavGroup[] = [
       { label: 'الخزينة والمالية', path: '/financials', icon: <Wallet size={18} /> },
       { label: 'الفواتير', path: '/invoices', icon: <Receipt size={18} /> },
       { label: 'المحاسبة', path: '/accounting', icon: <Calculator size={18} /> },
-      { label: 'كشف حساب المالك', path: '/owner-ledger', icon: <ShieldCheck size={18} /> },
     ],
   },
   {
@@ -176,11 +175,11 @@ const AppShell: React.FC = () => {
       {isSidebarOpen && <div className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm transition-opacity duration-300 lg:hidden" onClick={() => setIsSidebarOpen(false)} />}
 
       <aside
-        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col border-l border-sky-100/80 bg-[linear-gradient(180deg,#f8fbff_0%,#eef6ff_40%,#e7f0ff_100%)] shadow-[0_24px_64px_rgba(148,163,184,0.18)] transition-transform duration-300 ease-in-out dark:border-white/10 dark:bg-[linear-gradient(180deg,#183047_0%,#1f3f5b_46%,#234968_100%)] dark:shadow-[0_28px_72px_rgba(30,41,59,0.28)] ${
+        className={`fixed inset-y-0 right-0 z-50 flex w-72 flex-col border-l border-slate-200/80 bg-[linear-gradient(180deg,#fbfcfd_0%,#f5f8fb_46%,#edf2f7_100%)] shadow-[0_24px_64px_rgba(148,163,184,0.18)] transition-transform duration-300 ease-in-out dark:border-white/10 dark:bg-[linear-gradient(180deg,#15273a_0%,#1b3046_46%,#20394f_100%)] dark:shadow-[0_28px_72px_rgba(30,41,59,0.28)] ${
           isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
         } lg:relative lg:translate-x-0`}
       >
-        <div className="flex h-24 flex-shrink-0 items-center justify-between border-b border-sky-100/80 px-5 dark:border-white/10">
+        <div className="flex h-24 flex-shrink-0 items-center justify-between border-b border-slate-200/80 px-5 dark:border-white/10">
           <div className="flex items-center gap-3">
             <div className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500 shadow-[0_16px_26px_rgba(56,189,248,0.22)]">
               <Building2 size={18} className="text-white" />
@@ -196,10 +195,10 @@ const AppShell: React.FC = () => {
         </div>
 
         <div className="px-4 pt-5">
-          <div className="rounded-[24px] border border-white/90 bg-white/80 p-4 shadow-[0_10px_30px_rgba(148,163,184,0.12)] backdrop-blur-sm dark:border-white/10 dark:bg-white/8 dark:shadow-none">
+          <div className="rounded-[24px] border border-white/90 bg-white/82 p-4 shadow-[0_10px_30px_rgba(148,163,184,0.12)] backdrop-blur-sm dark:border-white/10 dark:bg-white/8 dark:shadow-none">
             <p className="text-[11px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500">مساحة العمل</p>
-            <p className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">تسلسل يومي واضح</p>
-            <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">ابدأ من العقار والأطراف ثم انتقل إلى العقود والتحصيل والصيانة والتقارير داخل تجربة موحدة.</p>
+            <p className="mt-2 text-sm font-bold text-slate-900 dark:text-slate-100">تدفق يومي واضح</p>
+            <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">ابدأ من السجلات الأساسية ثم انتقل إلى العقود والتحصيل والتقارير داخل تجربة ERP مترابطة.</p>
           </div>
         </div>
 
@@ -214,10 +213,10 @@ const AppShell: React.FC = () => {
                     to={item.path}
                     end={item.path === '/'}
                     className={({ isActive }) =>
-                      `group flex items-center gap-3 rounded-[22px] px-3 py-3 text-sm font-bold transition-all duration-150 ${
+                      `group flex items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-bold transition-all duration-150 ${
                         isActive
-                          ? 'bg-white text-slate-900 shadow-[0_16px_24px_rgba(148,163,184,0.20)] ring-1 ring-sky-100 dark:bg-white/14 dark:text-white dark:ring-white/10 dark:shadow-[0_16px_24px_rgba(15,23,42,0.16)]'
-                          : 'text-slate-600 hover:bg-white/65 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/7 dark:hover:text-white'
+                          ? 'bg-white text-slate-900 shadow-[0_16px_24px_rgba(148,163,184,0.20)] ring-1 ring-slate-200 dark:bg-white/14 dark:text-white dark:ring-white/10 dark:shadow-[0_16px_24px_rgba(15,23,42,0.16)]'
+                          : 'text-slate-600 hover:bg-white/70 hover:text-slate-900 dark:text-slate-300 dark:hover:bg-white/7 dark:hover:text-white'
                       }`
                     }
                   >
@@ -237,10 +236,10 @@ const AppShell: React.FC = () => {
           ))}
         </nav>
 
-        <div className="mb-16 flex-shrink-0 border-t border-sky-100/80 p-3 dark:border-white/10 lg:mb-0">
+        <div className="mb-16 flex-shrink-0 border-t border-slate-200/80 p-3 dark:border-white/10 lg:mb-0">
           <button
             onClick={handleLogout}
-            className="flex w-full items-center gap-3 rounded-[22px] px-3 py-3 text-sm font-bold text-slate-500 transition-all duration-150 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
+            className="flex w-full items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-bold text-slate-500 transition-all duration-150 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-400 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
           >
             <span className="flex h-9 w-9 items-center justify-center rounded-2xl bg-white/70 dark:bg-white/5">
               <LogOut size={18} />
@@ -251,7 +250,7 @@ const AppShell: React.FC = () => {
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col overflow-hidden pb-16 lg:pb-0">
-        <header className="sticky top-0 z-30 flex h-[72px] items-center border-b border-white/60 bg-white/82 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/72 lg:px-8">
+        <header className="sticky top-0 z-30 flex min-h-[76px] items-center border-b border-white/60 bg-white/82 px-4 py-3 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/72 lg:px-8">
           <button
             onClick={() => setIsSidebarOpen(true)}
             className="ml-4 rounded-2xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100 lg:hidden"
@@ -305,7 +304,7 @@ const AppShell: React.FC = () => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-4 lg:p-8">
+        <main className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-8">
           <Outlet />
         </main>
       </div>

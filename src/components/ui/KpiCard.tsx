@@ -21,8 +21,9 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon, color = 'blue', t
   const c = colorMap[color] ?? colorMap.blue;
 
   return (
-    <div className={`relative flex flex-col gap-4 overflow-hidden rounded-[30px] border ${c.border} bg-white/90 p-5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:bg-slate-900/88`}>
+    <div className={`relative flex flex-col gap-4 overflow-hidden rounded-[28px] border ${c.border} bg-white/90 p-5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:bg-slate-900/88`}>
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-slate-700/70" />
+      <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-primary/45 via-primary/10 to-transparent" />
       <div className="flex items-start justify-between">
         {icon && (
           <div className={`rounded-[18px] p-2.5 ${c.icon}`}>
@@ -38,7 +39,7 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon, color = 'blue', t
 
       <div>
         <p className="mb-1 text-[11px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{title}</p>
-        <p className={`text-2xl font-black tracking-tight ${c.accent}`}>{value}</p>
+        <p className={`break-words text-2xl font-black tracking-tight ${c.accent}`}>{value}</p>
       </div>
 
       <div className={`absolute -bottom-5 -left-5 h-20 w-20 rounded-full opacity-60 blur-2xl ${c.bg.split(' ')[0]}`} />

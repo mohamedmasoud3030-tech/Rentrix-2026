@@ -286,7 +286,7 @@ const Invoices: React.FC = () => {
                         exportInvoiceToPdf(printingInvoice, tenant, contract, db.settings);
                     }}
                 >
-                    <InvoicePrintable invoice={printingInvoice} />
+                    <InvoicePrintable invoice={printingInvoice} settings={db.settings} />
                 </PrintPreviewModal>
             )}
         </div>

@@ -17,7 +17,7 @@ interface TabsProps {
 const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, variant = 'underline' }) => {
   if (variant === 'pill') {
     return (
-      <div className="inline-flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/80 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/75">
+      <div className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/80 bg-slate-50/85 p-1.5 shadow-sm backdrop-blur-sm dark:border-slate-700 dark:bg-slate-900/75">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -27,8 +27,8 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, variant = 'und
               onClick={() => onTabClick(tab.id)}
               className={`inline-flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-bold transition-all ${
                 isActive
-                  ? 'bg-slate-950 text-white shadow-brand dark:bg-primary dark:text-slate-950'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-white text-slate-950 shadow-brand dark:bg-slate-800 dark:text-white'
+                  : 'text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
               }`}
             >
               {tab.icon}
@@ -46,7 +46,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, variant = 'und
   }
 
   return (
-    <div className="mb-6 flex flex-wrap border-b border-slate-200/80 dark:border-slate-800">
+    <div className="mb-6 flex flex-wrap gap-x-1 border-b border-slate-200/80 dark:border-slate-800">
       {tabs.map((tab) => {
         const isActive = activeTab === tab.id;
         return (

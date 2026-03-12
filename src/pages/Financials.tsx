@@ -338,7 +338,7 @@ const ReceiptsView: React.FC = () => {
                         const tenant = contract ? db.tenants.find(t => t.id === contract.tenantId) : undefined;
                         exportReceiptToPdf(printingReceipt, tenant, db.settings);
                     }}>
-                    <ReceiptPrintable receipt={printingReceipt} />
+                    <ReceiptPrintable receipt={printingReceipt} settings={db.settings} />
                 </PrintPreviewModal>
             )}
             {whatsAppContext && <WhatsAppComposerModal isOpen={!!whatsAppContext} onClose={() => setWhatsAppContext(null)} context={whatsAppContext} />}
@@ -419,7 +419,7 @@ const ExpensesView: React.FC = () => {
                         exportExpenseToPdf(printingExpense, db.settings);
                     }}
                 >
-                    <ExpensePrintable expense={printingExpense} />
+                    <ExpensePrintable expense={printingExpense} settings={db.settings} />
                 </PrintPreviewModal>
             )}
         </div>

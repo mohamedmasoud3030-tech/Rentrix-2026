@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useApp } from '../contexts/AppContext';
 import { User, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
@@ -23,10 +22,10 @@ const Login: React.FC = () => {
       if (error) {
         setError(error.message);
       } else if (data.session) {
-        navigate('/dashboard'); // Redirect to the dashboard after successful login
+        navigate('/');
       }
     } catch (err) {
-      console.error("Login error:", err);
+      console.error('Login error:', err);
       setError('حدث خطأ غير متوقع أثناء تسجيل الدخول.');
     } finally {
       setIsLoading(false);
@@ -34,48 +33,72 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md mx-auto bg-white rounded-lg border border-slate-200 shadow-sm">
-        <div className="p-8 md:p-10">
-          <div className="mb-8 text-center">
-            <div className="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center mb-4 mx-auto">
-              <ShieldCheck className="w-8 h-8 text-blue-600" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10" dir="rtl">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.10),_transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.08),_transparent_20%)]" />
+      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[34px] border border-slate-200/80 bg-white/88 shadow-[0_36px_80px_-34px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/88 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="hidden border-l border-slate-200/80 bg-[linear-gradient(135deg,#e7f0fb_0%,#f7fafc_45%,#ffffff_100%)] p-10 dark:border-slate-800 dark:bg-[linear-gradient(135deg,#193148_0%,#20384f_48%,#223d57_100%)] lg:block">
+          <div className="inline-flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500 text-white shadow-brand">
+            <ShieldCheck size={24} />
+          </div>
+          <h1 className="mt-8 text-3xl font-black tracking-tight text-slate-900 dark:text-white">رينتريكس ERP</h1>
+          <p className="mt-3 max-w-md text-sm leading-8 text-slate-600 dark:text-slate-300">
+            منصة تشغيل عقاري ومحاسبي موحدة لإدارة العقارات والوحدات والعقود والتحصيلات والصيانة ضمن تجربة عمل مؤسسية واضحة.
+          </p>
+
+          <div className="mt-10 space-y-4">
+            {[
+              'إدارة العقارات والوحدات من مساحة عمل موحدة',
+              'تحصيل وفوترة ومتابعة المتأخرات ضمن تدفق واحد',
+              'تقارير وتشغيل يومي بصياغة مؤسسية واضحة',
+            ].map((item) => (
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+                <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="p-6 sm:p-8 lg:p-10">
+          <div className="mb-8 text-center lg:text-right">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-50 text-blue-600 shadow-brand dark:bg-blue-500/10 dark:text-blue-300 lg:mx-0">
+              <ShieldCheck className="h-8 w-8" />
             </div>
-            <h1 className="text-2xl font-bold text-slate-900 mb-2">تسجيل الدخول للنظام</h1>
-            <p className="text-sm text-slate-600">أدخل بياناتك للوصول للوحة التحكم</p>
+            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900 dark:text-white">تسجيل الدخول للنظام</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">أدخل بياناتك للوصول إلى لوحة التحكم وإدارة العمليات اليومية.</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label htmlFor="email-field" className="block text-sm font-medium text-slate-700 mb-2">البريد الإلكتروني</label>
+            <div className="space-y-2">
+              <label htmlFor="email-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">البريد الإلكتروني</label>
               <div className="relative">
-                <User className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <User className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   id="email-field"
                   name="email"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pr-10 pl-3 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="البريد الإلكتروني"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/90 py-3 pr-11 pl-4 text-sm text-slate-800 shadow-sm transition-all duration-150 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100"
+                  placeholder="أدخل البريد الإلكتروني"
                   autoComplete="email"
                   required
                 />
               </div>
             </div>
 
-            <div>
-              <label htmlFor="password-field" className="block text-sm font-medium text-slate-700 mb-2">كلمة المرور</label>
+            <div className="space-y-2">
+              <label htmlFor="password-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">كلمة المرور</label>
               <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+                <Lock className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
                   id="password-field"
                   name="password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pr-10 pl-3 py-3 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-                  placeholder="••••••••"
+                  className="w-full rounded-2xl border border-slate-200/80 bg-white/90 py-3 pr-11 pl-4 text-sm text-slate-800 shadow-sm transition-all duration-150 focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100"
+                  placeholder="أدخل كلمة المرور"
                   autoComplete="current-password"
                   required
                 />
@@ -83,7 +106,7 @@ const Login: React.FC = () => {
             </div>
 
             {error && (
-              <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm font-medium p-3 rounded-lg flex items-center justify-center">
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
                 {error}
               </div>
             )}
@@ -91,24 +114,25 @@ const Login: React.FC = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full inline-flex items-center justify-center px-4 py-3 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
             >
               {isLoading ? (
                 <>
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin dark:border-slate-300/40 dark:border-t-slate-900" />
                   جاري التحقق...
                 </>
               ) : (
                 <>
                   تسجيل الدخول الآمن
-                  <ArrowLeft className="w-5 h-5" />
+                  <ArrowLeft className="h-5 w-5" />
                 </>
               )}
             </button>
           </form>
-        </div>
-        <div className="text-center text-xs text-muted-foreground p-4 border-t border-border">
-          <p dir="ltr">© 2024 Rentrix ERP | Masoud Apps</p>
+
+          <div className="mt-8 border-t border-slate-200/80 pt-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
+            <p>جميع العمليات محفوظة ومؤمنة داخل نظام رينتريكس</p>
+          </div>
         </div>
       </div>
     </div>

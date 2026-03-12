@@ -4,6 +4,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Calculator,
+  CalendarClock,
+  CalendarRange,
   FileBarChart,
   History,
   Scale,
@@ -13,6 +15,13 @@ import {
   Wallet,
   BarChart3,
   Clock,
+  Download,
+  Landmark,
+  Percent,
+  Printer,
+  ReceiptText,
+  ShieldAlert,
+  Wrench,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import Card from '../components/ui/Card';
@@ -21,7 +30,10 @@ import SummaryStatCard from '../components/ui/SummaryStatCard';
 import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 import PageHeader from '../components/ui/PageHeader';
 import StatusPill from '../components/ui/StatusPill';
+import SearchFilterBar from '../components/shared/SearchFilterBar';
+import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import { formatCurrency, formatDate } from '../utils/helpers';
+import { exportOwnerLedgerToPdf } from '../services/pdfService';
 import {
   calculateAgingReport,
   calculateBalanceSheetData,
@@ -136,8 +148,31 @@ const tableCellCls = 'px-4 py-3 text-sm text-slate-700';
 const Reports: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { db } = useApp();
   const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
   const [activeTab, setActiveTab] = useState<ReportTab | null>(queryParams.get('tab') as ReportTab | null);
+
+  const reportsOverview = useMemo(() => {
+    const now = Date.now();
+    const overdueInvoices = (db.invoices || []).filter((invoice) => {
+      if (!['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)) return false;
+      return new Date(invoice.dueDate).getTime() < now;
+    });
+    const expiringContracts = (db.contracts || []).filter((contract) => {
+      if (contract.status !== 'ACTIVE') return false;
+      const endDate = contract.endDate || contract.end;
+      const endTs = endDate ? new Date(endDate).getTime() : Number.POSITIVE_INFINITY;
+      const daysLeft = Math.ceil((endTs - now) / (1000 * 60 * 60 * 24));
+      return daysLeft >= 0 && daysLeft <= 45;
+    });
+
+    return {
+      totalReports: reportCards.length,
+      owners: (db.owners || []).length,
+      overdueInvoices: overdueInvoices.length,
+      expiringContracts: expiringContracts.length,
+    };
+  }, [db]);
 
   const openReport = (tab: ReportTab) => {
     setActiveTab(tab);

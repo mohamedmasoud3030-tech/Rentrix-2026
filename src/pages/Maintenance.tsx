@@ -311,7 +311,7 @@ const Maintenance: React.FC = () => {
                         exportMaintenanceRecordToPdf(printingRecord, unit, property, db.settings);
                     }}
                 >
-                    <MaintenancePrintable record={printingRecord} />
+                    <MaintenancePrintable record={printingRecord} settings={db.settings} />
                 </PrintPreviewModal>
             )}
         </div>

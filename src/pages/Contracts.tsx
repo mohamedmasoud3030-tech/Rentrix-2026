@@ -486,7 +486,7 @@ const Contracts: React.FC = () => {
             exportContractToPdf(printingContract, tenant, unit, property, owner, db.settings);
           }}
         >
-          <ContractPrintable contract={printingContract} />
+          <ContractPrintable contract={printingContract} settings={db.settings} />
         </PrintPreviewModal>
       )}
     </div>
