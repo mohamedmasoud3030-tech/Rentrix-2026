@@ -95,7 +95,14 @@ const Owners: React.FC = () => {
     const balance = ownerBalances[selectedOwner.id];
     const utilityExpenses = expenses.filter((expense) => ['كهرباء', 'مياه', 'إنترنت', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())));
     const overdueInvoices = invoices.filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now());
-    return { properties, units, contracts, receipts, invoices, expenses, maintenance, settlements, balance, utilityExpenses, overdueInvoices };
+    const expiringContracts = contracts
+      .filter((contract) => contract.status === 'ACTIVE')
+      .filter((contract) => {
+        const end = new Date(contract.end).getTime();
+        return end >= Date.now() && end - Date.now() <= 30 * 24 * 60 * 60 * 1000;
+      })
+      .slice(0, 5);
+    return { properties, units, contracts, receipts, invoices, expenses, maintenance, settlements, balance, utilityExpenses, overdueInvoices, expiringContracts };
   }, [db, ownerBalances, selectedOwner]);
 
   const stats = useMemo(() => ({
@@ -235,6 +242,49 @@ const Owners: React.FC = () => {
                   <div><strong>المصروفات:</strong> {formatCurrency(ownerWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div>
                   <div><strong>التسويات:</strong> {formatCurrency(ownerWorkspace.settlements.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div>
                   <div><strong>صيانة مفتوحة:</strong> {ownerWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">سجلات تحتاج متابعة</div>
+                <div className="space-y-2">
+                  {ownerWorkspace.overdueInvoices.slice(0, 4).map((invoice) => (
+                    <button
+                      type="button"
+                      key={invoice.id}
+                      onClick={() => navigate('/invoices')}
+                      className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70"
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                        <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span>
+                      </span>
+                      <span className="font-extrabold text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0))}</span>
+                    </button>
+                  ))}
+                  {!ownerWorkspace.overdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير متأخرة على عقارات هذا المالك.</div>}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">عقود تقترب من الانتهاء</div>
+                <div className="space-y-2">
+                  {ownerWorkspace.expiringContracts.map((contract) => (
+                    <button
+                      type="button"
+                      key={contract.id}
+                      onClick={() => navigate('/contracts')}
+                      className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70"
+                    >
+                      <span className="min-w-0">
+                        <span className="block font-bold text-slate-800 dark:text-slate-100">{formatDate(contract.end)}</span>
+                        <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{db.tenants.find((tenant) => tenant.id === contract.tenantId)?.name || db.tenants.find((tenant) => tenant.id === contract.tenantId)?.fullName || 'مستأجر غير محدد'}</span>
+                      </span>
+                      <span className="font-extrabold text-amber-600 dark:text-amber-300">{formatCurrency(contract.rent || 0)}</span>
+                    </button>
+                  ))}
+                  {!ownerWorkspace.expiringContracts.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد عقود قاربت على الانتهاء خلال 30 يومًا.</div>}
                 </div>
               </div>
             </div>

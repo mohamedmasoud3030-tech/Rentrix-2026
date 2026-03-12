@@ -27,6 +27,6 @@
       "*": ["src/*"]
     }
   },
-  "include": ["src", "server.ts"],
+  "include": ["src"],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import PageHeader from '../components/ui/PageHeader';
@@ -9,12 +9,14 @@ import SearchFilterBar from '../components/shared/SearchFilterBar';
 import StatusPill from '../components/ui/StatusPill';
 import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 import EmptyState from '../components/ui/EmptyState';
+import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import { exportOwnerLedgerToPdf } from '../services/pdfService';
-import { AlertTriangle, BarChart3, CalendarClock, CalendarRange, Download, Landmark, Percent, ReceiptText, ShieldAlert, Wallet, Wrench } from 'lucide-react';
+import { AlertTriangle, BarChart3, CalendarClock, CalendarRange, Download, Landmark, Percent, Printer, ReceiptText, ShieldAlert, Wallet, Wrench } from 'lucide-react';
 
 const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 transition-all placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20';
 
 const OwnerLedgerReport: React.FC = () => {
+  const navigate = useNavigate();
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const presetOwnerId = params.get('ownerId') || '';
@@ -25,6 +27,7 @@ const OwnerLedgerReport: React.FC = () => {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
+  const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
 
   const report = useMemo(() => {
     if (!ownerId) return null;
@@ -152,12 +155,14 @@ const OwnerLedgerReport: React.FC = () => {
 
     const activeContracts = contracts.filter((contract) => {
       if (contract.status !== 'ACTIVE') return false;
-      const endTs = contract.endDate ? new Date(contract.endDate).getTime() : Number.POSITIVE_INFINITY;
+      const contractEndDate = contract.endDate || contract.end;
+      const endTs = contractEndDate ? new Date(contractEndDate).getTime() : Number.POSITIVE_INFINITY;
       return endTs >= now;
     });
 
     const expiringContracts = activeContracts.filter((contract) => {
-      const endTs = contract.endDate ? new Date(contract.endDate).getTime() : Number.POSITIVE_INFINITY;
+      const contractEndDate = contract.endDate || contract.end;
+      const endTs = contractEndDate ? new Date(contractEndDate).getTime() : Number.POSITIVE_INFINITY;
       const daysLeft = Math.ceil((endTs - now) / (1000 * 60 * 60 * 24));
       return daysLeft >= 0 && daysLeft <= 45;
     });
@@ -224,6 +229,26 @@ const OwnerLedgerReport: React.FC = () => {
   return (
     <div className="space-y-6">
       <PageHeader title="كشف حساب المالك" description="تقرير احترافي يوضح إجمالي التحصيل، عمولة المكتب، المصروفات، وصافي المستحق قبل وبعد خصم العمولة." />
+
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => navigate('/reports?tab=owner')}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+        >
+          <BarChart3 size={16} />
+          مركز التقارير
+        </button>
+        <button
+          type="button"
+          onClick={() => setIsPrintPreviewOpen(true)}
+          disabled={!report}
+          className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <Printer size={16} />
+          معاينة قبل الطباعة
+        </button>
+      </div>
 
       <Card>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -400,8 +425,8 @@ const OwnerLedgerReport: React.FC = () => {
                   <div key={contract.id} className="rounded-2xl border border-slate-200 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-900/60">
                     <div className="flex items-center justify-between gap-3">
                       <div>
-                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{contract.no || 'عقد بدون رقم'}</p>
-                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">ينتهي في {formatDate(contract.endDate)}</p>
+                        <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{contract.no || `عقد ${contract.id.slice(0, 8)}`}</p>
+                        <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">ينتهي في {formatDate(contract.endDate || contract.end)}</p>
                       </div>
                       <StatusPill status="warning">قريب الانتهاء</StatusPill>
                     </div>
@@ -458,6 +483,87 @@ const OwnerLedgerReport: React.FC = () => {
               </tbody>
             </TableWrapper>
           </Card>
+
+          <PrintPreviewModal
+            isOpen={isPrintPreviewOpen}
+            onClose={() => setIsPrintPreviewOpen(false)}
+            title={`معاينة كشف حساب المالك${report ? ` - ${report.owner.name}` : ''}`}
+            onExportPdf={() => {
+              if (!report) return;
+              exportOwnerLedgerToPdf(
+                report.transactions,
+                {
+                  gross: report.beforeCommission,
+                  officeShare: report.officeShare,
+                  net: report.afterCommission,
+                },
+                settings!,
+                report.owner.name,
+                report.commissionTypeLabel,
+                false,
+              );
+            }}
+          >
+            {report && (
+              <div className="space-y-6 text-right text-slate-800">
+                <div className="border-b border-slate-200 pb-4">
+                  <h2 className="text-2xl font-black">كشف حساب المالك</h2>
+                  <p className="mt-2 text-sm text-slate-500">{report.owner.name}</p>
+                  <p className="mt-1 text-xs text-slate-400">
+                    {startDate || endDate
+                      ? `الفترة: ${startDate ? formatDate(startDate) : 'من البداية'} إلى ${endDate ? formatDate(endDate) : 'حتى اليوم'}`
+                      : 'الفترة: جميع الحركات المسجلة'}
+                  </p>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-bold text-slate-500">إجمالي التحصيل</p>
+                    <p className="mt-2 text-lg font-black text-slate-800">{formatCurrency(report.grossCollections)}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-bold text-slate-500">عمولة المكتب</p>
+                    <p className="mt-2 text-lg font-black text-amber-600">{formatCurrency(report.officeShare)}</p>
+                  </div>
+                  <div className="rounded-xl bg-slate-50 px-4 py-3">
+                    <p className="text-xs font-bold text-slate-500">الصافي بعد العمولة</p>
+                    <p className="mt-2 text-lg font-black text-emerald-700">{formatCurrency(report.afterCommission)}</p>
+                  </div>
+                </div>
+
+                <div className="overflow-hidden rounded-2xl border border-slate-200">
+                  <table className="min-w-full text-sm">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-4 py-3 text-right font-bold text-slate-500">التاريخ</th>
+                        <th className="px-4 py-3 text-right font-bold text-slate-500">البيان</th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-500">الإجمالي</th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-500">عمولة المكتب</th>
+                        <th className="px-4 py-3 text-left font-bold text-slate-500">صافي المالك</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {report.transactions.slice(0, 18).map((tx) => (
+                        <tr key={`preview-${tx.type}-${tx.id}`} className="border-t border-slate-100">
+                          <td className="px-4 py-3">{formatDate(tx.date)}</td>
+                          <td className="px-4 py-3 text-slate-700">{tx.label}</td>
+                          <td className="px-4 py-3 text-left font-mono">{formatCurrency(tx.gross)}</td>
+                          <td className="px-4 py-3 text-left font-mono">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction) : '—'}</td>
+                          <td className="px-4 py-3 text-left font-mono font-bold">{formatCurrency(tx.ownerNet)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {report.transactions.length > 18 && (
+                  <p className="text-xs text-slate-400">
+                    تعرض المعاينة أول {report.transactions.slice(0, 18).length.toLocaleString('ar')} حركة فقط. ملف PDF سيحتوي على جميع الحركات المطابقة للفلاتر.
+                  </p>
+                )}
+              </div>
+            )}
+          </PrintPreviewModal>
         </>
       ) : (
         <EmptyState icon={CalendarRange} title="اختر مالكًا لعرض كشف الحساب" description="يمكنك بعد ذلك تصفية الفترة الزمنية، تصدير PDF، ومراجعة الأرصدة قبل وبعد خصم العمولة." />

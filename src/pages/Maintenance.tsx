@@ -20,6 +20,26 @@ import { exportMaintenanceRecordToPdf } from '../services/pdfService';
 // Use the shared TableWrapper to ensure a consistent table design across the app
 import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 
+const primaryButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-600';
+const ghostButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800';
+const warningButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-amber-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-amber-600';
+const inputCls = 'w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2.5 text-sm text-slate-800 shadow-sm transition-all duration-150 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100';
+const labelCls = 'mb-1.5 block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300';
+
+const displayUnitName = (unit?: { name?: string | null; unitNumber?: string | null } | null) => unit?.name || unit?.unitNumber || 'وحدة غير محددة';
+const getChargedToLabel = (value?: string | null) => {
+    switch (value) {
+        case 'OWNER':
+            return 'المالك';
+        case 'TENANT':
+            return 'المستأجر';
+        case 'OFFICE':
+            return 'المكتب';
+        default:
+            return 'غير محدد';
+    }
+};
+
 const Maintenance: React.FC = () => {
     const { db, dataService } = useApp();
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -115,7 +135,7 @@ const Maintenance: React.FC = () => {
             <Card>
                 <div className="flex justify-between items-center mb-4">
                     <h2 className="text-xl font-bold">طلبات الصيانة (مرتبة حسب الأولوية)</h2>
-                    <button onClick={() => handleOpenModal()} className="btn btn-primary flex items-center gap-2">
+                    <button onClick={() => handleOpenModal()} className={primaryButtonCls}>
                         <PlusCircle size={16}/>
                         إضافة طلب صيانة
                     </button>
@@ -149,7 +169,7 @@ const Maintenance: React.FC = () => {
                           >
                             <Td className="font-mono font-bold text-slate-800">{rec.no}</Td>
                             <Td className="font-medium text-slate-800">
-                              <div>{unit?.name}</div>
+                              <div>{displayUnitName(unit)}</div>
                               <div className="text-xs text-slate-500">{property?.name}</div>
                             </Td>
                             <Td>{formatDate(rec.requestDate)}</Td>
@@ -165,7 +185,7 @@ const Maintenance: React.FC = () => {
                                       e.stopPropagation();
                                       dataService.update('maintenanceRecords', rec.id, { status: 'IN_PROGRESS' });
                                     }}
-                                    className="btn btn-sm btn-secondary"
+                                    className={warningButtonCls}
                                   >
                                     بدء العمل
                                   </button>
@@ -176,7 +196,7 @@ const Maintenance: React.FC = () => {
                                       e.stopPropagation();
                                       handleOpenModal(rec);
                                     }}
-                                    className="btn btn-sm btn-primary"
+                                    className={primaryButtonCls}
                                   >
                                     إنشاء مصروف/فاتورة
                                   </button>
@@ -217,10 +237,10 @@ const Maintenance: React.FC = () => {
                                 <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">متابعة الطلب المحدد وربطه بالعقار والوحدة والطرف المتحمل للتكلفة.</p>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleOpenModal(selectedRecord)} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800">
+                                <button onClick={() => handleOpenModal(selectedRecord)} className={ghostButtonCls}>
                                     تعديل
                                 </button>
-                                <button onClick={() => setPrintingRecord(selectedRecord)} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-600">
+                                <button onClick={() => setPrintingRecord(selectedRecord)} className={primaryButtonCls}>
                                     طباعة
                                 </button>
                             </div>
@@ -230,7 +250,7 @@ const Maintenance: React.FC = () => {
                             <SummaryStatCard label="رقم الطلب" value={selectedRecord.no || '—'} icon={<Wrench size={18}/>} color="slate"/>
                             <SummaryStatCard label="التكلفة" value={formatCurrency(selectedRecord.cost)} icon={<DollarSign size={18}/>} color="blue"/>
                             <SummaryStatCard label="الحالة" value={getStatusLabel(selectedRecord.status)} icon={<Clock size={18}/>} color={['COMPLETED','CLOSED'].includes(selectedRecord.status) ? 'emerald' : 'amber'}/>
-                            <SummaryStatCard label="التحميل" value={selectedRecord.chargedTo || '—'} icon={<AlertTriangle size={18}/>} color="rose"/>
+                            <SummaryStatCard label="التحميل" value={getChargedToLabel(selectedRecord.chargedTo)} icon={<AlertTriangle size={18}/>} color="rose"/>
                         </div>
 
                         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -238,8 +258,8 @@ const Maintenance: React.FC = () => {
                                 <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الربط التشغيلي</div>
                                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
                                     <div><strong>العقار:</strong> {maintenanceWorkspace.property?.name || '—'}</div>
-                                    <div><strong>الوحدة:</strong> {maintenanceWorkspace.unit?.name || '—'}</div>
-                                    <div><strong>المستأجر الحالي:</strong> {maintenanceWorkspace.tenant?.name || '—'}</div>
+                                    <div><strong>الوحدة:</strong> {displayUnitName(maintenanceWorkspace.unit)}</div>
+                                    <div><strong>المستأجر الحالي:</strong> {maintenanceWorkspace.tenant?.name || maintenanceWorkspace.tenant?.fullName || '—'}</div>
                                     <div><strong>تاريخ الطلب:</strong> {formatDate(selectedRecord.requestDate)}</div>
                                 </div>
                             </div>
@@ -248,7 +268,7 @@ const Maintenance: React.FC = () => {
                                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
                                     <div><strong>مصروف مرتبط:</strong> {maintenanceWorkspace.expense?.no || 'لا يوجد'}</div>
                                     <div><strong>فاتورة مرتبطة:</strong> {maintenanceWorkspace.invoice?.no || 'لا يوجد'}</div>
-                                    <div><strong>الطرف المتحمل:</strong> {selectedRecord.chargedTo || '—'}</div>
+                                    <div><strong>الطرف المتحمل:</strong> {getChargedToLabel(selectedRecord.chargedTo)}</div>
                                     <div><strong>الوصف:</strong> {selectedRecord.description || '—'}</div>
                                 </div>
                             </div>
@@ -358,18 +378,38 @@ const MaintenanceForm: React.FC<{ isOpen: boolean, onClose: () => void, record: 
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={record ? "تعديل طلب صيانة" : "إضافة طلب صيانة"}>
-            <form onSubmit={handleSubmit} className="space-y-4">
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <select name="unitId" value={data.unitId} onChange={handleChange} required>{db.units.map(u => <option key={u.id} value={u.id}>{u.name} ({db.properties.find(p=>p.id === u.propertyId)?.name})</option>)}</select>
-                    <input name="requestDate" type="date" value={data.requestDate} onChange={handleChange} required />
+            <form onSubmit={handleSubmit} className="space-y-5">
+                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label className={labelCls}>الوحدة</label>
+                        <select className={inputCls} name="unitId" value={data.unitId} onChange={handleChange} required>
+                            {db.units.map(u => <option key={u.id} value={u.id}>{displayUnitName(u)} ({db.properties.find(p=>p.id === u.propertyId)?.name})</option>)}
+                        </select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>تاريخ الطلب</label>
+                        <input className={inputCls} name="requestDate" type="date" value={data.requestDate} onChange={handleChange} required />
+                    </div>
                  </div>
-                 <textarea name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="الوصف" />
-                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <select name="status" value={data.status} onChange={handleChange}><option value="NEW">جديد</option><option value="IN_PROGRESS">قيد التنفيذ</option><option value="COMPLETED">مكتمل</option><option value="CLOSED">مغلق</option></select>
-                    <input name="cost" type="number" value={data.cost || ''} onChange={handleChange} placeholder="التكلفة"/>
-                    <select name="chargedTo" value={data.chargedTo} onChange={handleChange}><option value="OWNER">المالك</option><option value="OFFICE">المكتب</option><option value="TENANT">المستأجر</option></select>
+                 <div>
+                    <label className={labelCls}>وصف الطلب</label>
+                    <textarea className={`${inputCls} min-h-[110px]`} name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="اكتب وصفًا واضحًا للمشكلة أو الأعمال المطلوبة" />
                  </div>
-                <div className="flex justify-end gap-3 pt-4 mt-4 border-t border-border"><button type="button" onClick={onClose} className="btn btn-ghost">إلغاء</button><button type="submit" className="btn btn-primary">حفظ</button></div>
+                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div>
+                        <label className={labelCls}>الحالة</label>
+                        <select className={inputCls} name="status" value={data.status} onChange={handleChange}><option value="NEW">جديد</option><option value="IN_PROGRESS">قيد التنفيذ</option><option value="COMPLETED">مكتمل</option><option value="CLOSED">مغلق</option></select>
+                    </div>
+                    <div>
+                        <label className={labelCls}>التكلفة</label>
+                        <input className={inputCls} name="cost" type="number" value={data.cost || ''} onChange={handleChange} placeholder="0.000"/>
+                    </div>
+                    <div>
+                        <label className={labelCls}>تحميل التكلفة على</label>
+                        <select className={inputCls} name="chargedTo" value={data.chargedTo} onChange={handleChange}><option value="OWNER">المالك</option><option value="OFFICE">المكتب</option><option value="TENANT">المستأجر</option></select>
+                    </div>
+                 </div>
+                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button><button type="submit" className={primaryButtonCls}>حفظ</button></div>
             </form>
         </Modal>
     );

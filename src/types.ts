@@ -181,12 +181,15 @@ export interface Tenant {
 
 export interface Contract {
   id: string;
+  no?: string | null;
   unitId: string;
   tenantId: string;
   rent: number;
   dueDay: number;
   start: string;        // ISO date string — maps to start_date in DB
   end: string;          // ISO date string — maps to end_date in DB
+  startDate?: string;
+  endDate?: string;
   deposit: number;      // maps to deposit_amount in DB
   status: 'ACTIVE' | 'TERMINATED' | 'EXPIRED' | 'ENDED' | 'SUSPENDED';
   notes: string | null;

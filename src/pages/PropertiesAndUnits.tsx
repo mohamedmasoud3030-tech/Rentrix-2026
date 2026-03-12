@@ -704,6 +704,37 @@ const PropertiesAndUnits: React.FC = () => {
                 <div><strong>آخر تنبيه:</strong> {propertyWorkspace.maintenance.some((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)) ? 'توجد أعمال صيانة مفتوحة' : 'لا توجد تنبيهات حرجة'}</div>
               </div>
               <div className="mt-4">
+                <div className="mb-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                  <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">تنبيهات العقار</div>
+                  <div className="space-y-2">
+                    {propertyWorkspace.invoices
+                      .filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now())
+                      .slice(0, 3)
+                      .map((invoice) => (
+                        <button key={invoice.id} type="button" onClick={() => navigate('/invoices')} className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                          <span className="text-xs text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                        </button>
+                      ))}
+                    {propertyWorkspace.contracts
+                      .filter((contract) => contract.status === 'ACTIVE')
+                      .filter((contract) => {
+                        const end = new Date(contract.end).getTime();
+                        return end >= Date.now() && end - Date.now() <= 30 * 24 * 60 * 60 * 1000;
+                      })
+                      .slice(0, 2)
+                      .map((contract) => (
+                        <button key={contract.id} type="button" onClick={() => navigate('/contracts')} className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">عقد ينتهي قريبًا</span>
+                          <span className="text-xs text-amber-600 dark:text-amber-300">{formatDate(contract.end)}</span>
+                        </button>
+                      ))}
+                    {!propertyWorkspace.invoices.some((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now()) &&
+                      !propertyWorkspace.contracts.some((contract) => contract.status === 'ACTIVE' && new Date(contract.end).getTime() >= Date.now() && new Date(contract.end).getTime() - Date.now() <= 30 * 24 * 60 * 60 * 1000) && (
+                        <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد تنبيهات تشغيلية على هذا العقار.</div>
+                      )}
+                  </div>
+                </div>
                 <AttachmentsManager entityType="PROPERTY" entityId={selectedProperty.id} />
               </div>
             </Card>
@@ -734,6 +765,33 @@ const PropertiesAndUnits: React.FC = () => {
                 <div><strong>التنبيه:</strong> {unitWorkspace.invoices.some((item) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(item.status) && new Date(item.dueDate).getTime() < Date.now()) ? 'توجد متأخرات على الوحدة' : 'لا توجد متأخرات حالية'}</div>
               </div>
               <div className="mt-4">
+                <div className="mb-4 rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                  <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">تنبيهات الوحدة</div>
+                  <div className="space-y-2">
+                    {unitWorkspace.invoices
+                      .filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now())
+                      .slice(0, 2)
+                      .map((invoice) => (
+                        <button key={invoice.id} type="button" onClick={() => navigate('/invoices')} className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                          <span className="text-xs text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                        </button>
+                      ))}
+                    {unitWorkspace.maintenance
+                      .filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status))
+                      .slice(0, 2)
+                      .map((record) => (
+                        <button key={record.id} type="button" onClick={() => navigate('/maintenance')} className="flex w-full items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-right text-sm dark:bg-slate-900/70">
+                          <span className="font-bold text-slate-800 dark:text-slate-100">{record.issueTitle || record.description || 'طلب صيانة'}</span>
+                          <span className="text-xs text-amber-600 dark:text-amber-300">{record.status}</span>
+                        </button>
+                      ))}
+                    {!unitWorkspace.invoices.some((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now()) &&
+                      !unitWorkspace.maintenance.some((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)) && (
+                        <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد تنبيهات تشغيلية على هذه الوحدة.</div>
+                      )}
+                  </div>
+                </div>
                 <AttachmentsManager entityType="UNIT" entityId={selectedUnit.id} />
               </div>
             </Card>

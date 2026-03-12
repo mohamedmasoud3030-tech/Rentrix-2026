@@ -54,6 +54,7 @@ const Contracts: React.FC = () => {
   const [printingContract, setPrintingContract] = useState<Contract | null>(null);
   const [defaultUnitId, setDefaultUnitId] = useState<string | undefined>();
   const [selectedContractId, setSelectedContractId] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | Contract['status']>('ALL');
 
   const currency = db.settings?.currency || 'OMR';
 
@@ -89,15 +90,19 @@ const Contracts: React.FC = () => {
 
   const filteredContracts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
-    if (!term) return contractRows;
-    return contractRows.filter((contract) =>
+    return contractRows.filter((contract) => {
+      const matchesStatus = statusFilter === 'ALL' || contract.status === statusFilter;
+      if (!matchesStatus) return false;
+      if (!term) return true;
+      return (
       [contract.tenantName, contract.unitName, contract.propertyName, contract.status, contract.start, contract.end]
         .filter(Boolean)
         .join(' ')
         .toLowerCase()
         .includes(term)
-    );
-  }, [contractRows, searchTerm]);
+      );
+    });
+  }, [contractRows, searchTerm, statusFilter]);
 
   const selectedContract = useMemo(() => contractRows.find((contract) => contract.id === selectedContractId) || contractRows[0] || null, [contractRows, selectedContractId]);
 
@@ -118,7 +123,12 @@ const Contracts: React.FC = () => {
       ['كهرباء', 'مياه', 'إنترنت', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())),
     );
 
-    return { unit, property, owner, tenant, invoices, receipts, expenses, maintenance, overdueInvoices, utilityExpenses };
+    const upcomingInvoices = invoices
+      .filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status))
+      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+      .slice(0, 5);
+
+    return { unit, property, owner, tenant, invoices, receipts, expenses, maintenance, overdueInvoices, utilityExpenses, upcomingInvoices };
   }, [db.expenses, db.invoices, db.maintenanceRecords, db.owners, db.properties, db.receipts, db.tenants, db.units, selectedContract]);
 
   const stats = useMemo(() => {
@@ -211,6 +221,15 @@ const Contracts: React.FC = () => {
         </div>
 
         <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث باسم المستأجر أو الوحدة أو العقار أو حالة العقد..." />
+
+        <div className="mb-4 flex justify-end">
+          <select className={inputCls} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ALL' | Contract['status'])}>
+            <option value="ALL">كل الحالات</option>
+            <option value="ACTIVE">نشط</option>
+            <option value="ENDED">منتهي</option>
+            <option value="SUSPENDED">معلق</option>
+          </select>
+        </div>
 
         {filteredContracts.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-14 text-center">
@@ -337,6 +356,41 @@ const Contracts: React.FC = () => {
                   <div><strong>إجمالي المقبوض:</strong> {formatCurrency(contractWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
                   <div><strong>المصروفات:</strong> {formatCurrency(contractWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
                   <div><strong>التأمين:</strong> {formatCurrency(selectedContract.deposit || 0, currency)}</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">الاستحقاقات القادمة</div>
+                <div className="space-y-2">
+                  {contractWorkspace.upcomingInvoices.map((invoice) => (
+                    <div key={invoice.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
+                      <span className="min-w-0">
+                        <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                        <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span>
+                      </span>
+                      <span className="font-extrabold text-slate-700 dark:text-slate-200">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                    </div>
+                  ))}
+                  {!contractWorkspace.upcomingInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير معلقة أو قادمة لهذا العقد.</div>}
+                </div>
+              </div>
+              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">إجراءات سريعة</div>
+                <div className="grid grid-cols-1 gap-2">
+                  <button type="button" onClick={() => navigate('/financials')} className={ghostButton}>
+                    <Receipt size={15} />
+                    فتح شاشة التحصيل لهذا العقد
+                  </button>
+                  <button type="button" onClick={() => navigate('/invoices')} className={ghostButton}>
+                    <FileText size={15} />
+                    مراجعة الفواتير
+                  </button>
+                  <button type="button" onClick={() => navigate('/maintenance')} className={ghostButton}>
+                    <Wrench size={15} />
+                    متابعة الصيانة المرتبطة
+                  </button>
                 </div>
               </div>
             </div>

@@ -1,5 +1,6 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Receipt, Expense, DepositTx, OwnerSettlement, Tenant, Invoice } from '../types';
 import Card from '../components/ui/Card';
@@ -31,8 +32,12 @@ const ghostButtonCls =
     'inline-flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800';
 const sectionTitleCls = 'text-xl font-black tracking-tight text-slate-800 dark:text-slate-100';
 const tableHeadCls = 'bg-slate-50/70 dark:bg-slate-800/70';
+const infoPanelCls = 'rounded-2xl bg-slate-50/90 p-4 dark:bg-slate-800/70';
+const quietActionCls =
+    'inline-flex items-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 px-3.5 py-2 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800';
 
 const Financials: React.FC = () => {
+    const navigate = useNavigate();
     const { db, ownerBalances, contractBalances } = useApp();
     const [activeTab, setActiveTab] = useState<'receipts' | 'expenses' | 'deposits' | 'settlements'>('receipts');
     const currency = db.settings?.currency || 'OMR';
@@ -55,12 +60,60 @@ const Financials: React.FC = () => {
             settlementsCount: postedSettlements.length,
             ownerPayables,
             tenantReceivables,
+            topOverdueInvoices: overdueInvoices
+                .map((invoice) => {
+                    const contract = db.contracts.find((item) => item.id === invoice.contractId);
+                    const tenant = contract ? db.tenants.find((item) => item.id === contract.tenantId) : null;
+                    const unit = contract ? db.units.find((item) => item.id === contract.unitId) : null;
+                    return {
+                        ...invoice,
+                        tenantName: tenant?.name || tenant?.fullName || 'مستأجر غير محدد',
+                        unitName: unit?.name || unit?.unitNumber || 'وحدة غير محددة',
+                    };
+                })
+                .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
+                .slice(0, 5),
+            topOwnerBalances: Object.entries(ownerBalances || {})
+                .map(([ownerId, balance]: [string, any]) => ({
+                    ownerId,
+                    ownerName: db.owners.find((owner) => owner.id === ownerId)?.name || 'مالك غير محدد',
+                    net: Number(balance?.net || 0),
+                }))
+                .filter((item) => item.net > 0)
+                .sort((a, b) => b.net - a.net)
+                .slice(0, 5),
+            maintenanceImpact: openMaintenance
+                .map((record) => {
+                    const property = db.properties.find((item) => item.id === record.propertyId);
+                    const unit = record.unitId ? db.units.find((item) => item.id === record.unitId) : null;
+                    return {
+                        id: record.id,
+                        issueTitle: record.issueTitle || record.description || 'طلب صيانة',
+                        propertyName: property?.name || 'عقار غير محدد',
+                        unitName: unit?.name || unit?.unitNumber || 'وحدة غير محددة',
+                    };
+                })
+                .slice(0, 4),
         };
-    }, [contractBalances, db.expenses, db.invoices, db.maintenanceRecords, db.ownerSettlements, db.receipts, ownerBalances]);
+    }, [contractBalances, db.contracts, db.expenses, db.invoices, db.maintenanceRecords, db.ownerSettlements, db.owners, db.properties, db.receipts, db.tenants, db.units, ownerBalances]);
     
     return (
         <div className="space-y-6">
             <PageHeader title="الخزينة والمالية" description="إدارة السندات، المصروفات، والتحويلات المالية للملاك والمستأجرين." />
+            <div className="flex flex-wrap gap-2">
+                <button type="button" onClick={() => setActiveTab('receipts')} className={quietActionCls}>
+                    <ReceiptIcon size={15} />
+                    سندات القبض
+                </button>
+                <button type="button" onClick={() => setActiveTab('expenses')} className={quietActionCls}>
+                    <Wallet size={15} />
+                    المصروفات
+                </button>
+                <button type="button" onClick={() => navigate('/invoices')} className={ghostButtonCls}>
+                    <CreditCard size={15} />
+                    الفواتير
+                </button>
+            </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <Card className="p-5">
                     <div className="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المقبوضات</div>
@@ -106,6 +159,63 @@ const Financials: React.FC = () => {
                                 <div><strong>المصروفات:</strong> {officeWorkspace.expensesCount.toLocaleString('ar')}</div>
                             </div>
                         </div>
+                    </div>
+                    <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                        <div className={infoPanelCls}>
+                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">فواتير تحتاج تحصيلًا الآن</div>
+                            <div className="space-y-2">
+                                {officeWorkspace.topOverdueInvoices.map((invoice) => (
+                                    <button
+                                        type="button"
+                                        key={invoice.id}
+                                        onClick={() => navigate('/invoices')}
+                                        className="flex w-full items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-right text-sm transition-colors hover:bg-white dark:bg-slate-900/70 dark:hover:bg-slate-900"
+                                    >
+                                        <span className="min-w-0">
+                                            <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.tenantName}</span>
+                                            <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{invoice.unitName} • {formatDate(invoice.dueDate)}</span>
+                                        </span>
+                                        <span className="font-extrabold text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                                    </button>
+                                ))}
+                                {!officeWorkspace.topOverdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير متأخرة حاليًا.</div>}
+                            </div>
+                        </div>
+                        <div className={infoPanelCls}>
+                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">مستحقات ملاك تحتاج تسوية</div>
+                            <div className="space-y-2">
+                                {officeWorkspace.topOwnerBalances.map((owner) => (
+                                    <button
+                                        type="button"
+                                        key={owner.ownerId}
+                                        onClick={() => navigate(`/owner-ledger?ownerId=${owner.ownerId}`)}
+                                        className="flex w-full items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-right text-sm transition-colors hover:bg-white dark:bg-slate-900/70 dark:hover:bg-slate-900"
+                                    >
+                                        <span className="font-bold text-slate-800 dark:text-slate-100">{owner.ownerName}</span>
+                                        <span className="font-extrabold text-blue-600 dark:text-blue-300">{formatCurrency(owner.net, currency)}</span>
+                                    </button>
+                                ))}
+                                {!officeWorkspace.topOwnerBalances.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد أرصدة موجبة تحتاج تحويلًا الآن.</div>}
+                            </div>
+                        </div>
+                    </div>
+                    <div className="mt-4 space-y-2">
+                        <div className="text-sm font-extrabold text-slate-700 dark:text-slate-200">سجلات تحتاج متابعة</div>
+                        {officeWorkspace.maintenanceImpact.map((record) => (
+                            <button
+                                type="button"
+                                key={record.id}
+                                onClick={() => navigate('/maintenance')}
+                                className="flex w-full items-center justify-between rounded-2xl bg-slate-50/90 px-3 py-2 text-right text-sm transition-colors hover:bg-slate-100 dark:bg-slate-800/70 dark:hover:bg-slate-800"
+                            >
+                                <span className="min-w-0">
+                                    <span className="block font-bold text-slate-800 dark:text-slate-100">{record.issueTitle}</span>
+                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{record.propertyName} • {record.unitName}</span>
+                                </span>
+                                <ArrowRightLeft size={15} className="text-slate-400" />
+                            </button>
+                        ))}
+                        {!officeWorkspace.maintenanceImpact.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد طلبات صيانة حرجة في الوقت الحالي.</div>}
                     </div>
                 </Card>
 

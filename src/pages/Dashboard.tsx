@@ -81,7 +81,7 @@ const Dashboard: React.FC = () => {
       const propertyContracts = activeContracts.filter((contract) => units.some((unit) => unit.id === contract.unitId));
       const revenue = propertyContracts.reduce((sum, contract) => sum + (contract.rent || 0), 0);
       const occupancy = units.length ? (occupied / units.length) * 100 : 0;
-      const tone = occupancy >= 85 ? 'emerald' : occupancy >= 60 ? 'amber' : 'rose';
+      const tone: MapPoint['tone'] = occupancy >= 85 ? 'emerald' : occupancy >= 60 ? 'amber' : 'rose';
 
       return {
         ...property,
@@ -225,7 +225,7 @@ const Dashboard: React.FC = () => {
           id: property.id,
           title: 'عقار بحاجة إلى معالجة الشواغر',
           detail: `${property.name} يحتوي على ${property.vacant.toLocaleString('ar')} وحدات شاغرة.`,
-          tone: 'blue',
+          tone: 'amber',
           path: '/properties',
         })),
     ].slice(0, 6);
