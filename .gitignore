@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+.netlify
+.codex-dev.log
+.codex-dev
+.vscode
+.zencoder
+.zenflow
+.DS_Store
