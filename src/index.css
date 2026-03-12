@@ -1,8 +1,8 @@
-@import url('https://fonts.googleapis.com/css2?family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;500;600;700;800&family=Noto+Sans+Arabic:wght@400;500;600;700&family=Tajawal:wght@400;500;600;700&family=Alexandria:wght@400;500;600;700;800;900&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: 'Alexandria', 'IBM Plex Sans Arabic', sans-serif;
+  --font-sans: 'Cairo', 'Noto Sans Arabic', 'Tajawal', 'Alexandria', 'IBM Plex Sans Arabic', system-ui, sans-serif;
   --color-border: hsl(var(--border));
   --color-input: hsl(var(--input));
   --color-background: hsl(var(--background));
@@ -50,6 +50,10 @@
   --topbar-height: 64px;
   --shadow-brand: 0 20px 40px -28px rgb(51 65 85 / 0.14), 0 8px 20px -18px rgb(15 23 42 / 0.08);
   --shadow-brand-lg: 0 26px 58px -30px rgb(51 65 85 / 0.18), 0 14px 28px -22px rgb(15 23 42 / 0.10);
+  --page-padding: 1rem;
+  --density-1: 0.75rem;
+  --density-2: 0.625rem;
+  --density-3: 0.5rem;
 }
 
 [data-theme="dark"] {
@@ -74,10 +78,12 @@
 
 html {
   scroll-behavior: smooth;
+  direction: rtl;
 }
 
 body {
   font-family: var(--font-sans);
+  direction: rtl;
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   background-image:
@@ -88,6 +94,12 @@ body {
   margin: 0;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
 }
 
 [data-theme="dark"] body {
@@ -104,15 +116,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .app-page {
-  @apply mx-auto w-full max-w-[1600px] space-y-4;
+  @apply mx-auto w-full max-w-[1600px] space-y-3;
 }
 
 .erp-panel {
-  @apply rounded-[24px] border border-slate-200/80 bg-white/90 p-4 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
+  @apply rounded-[22px] border border-slate-200/80 bg-white/92 p-3.5 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
 }
 
 .erp-toolbar {
-  @apply flex flex-col gap-2.5 rounded-[22px] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 md:flex-row md:items-center md:justify-between;
+  @apply flex flex-col gap-2 rounded-[20px] border border-slate-200/70 bg-white/80 p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 md:flex-row md:items-center md:justify-between;
 }
 
 .erp-kicker {
@@ -120,7 +132,19 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .erp-grid-auto {
-  @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+  @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+}
+
+.erp-content-grid {
+  @apply grid gap-3 lg:grid-cols-2 xl:gap-4;
+}
+
+.erp-card-grid {
+  @apply grid gap-3 sm:grid-cols-2 xl:grid-cols-4;
+}
+
+.erp-secondary-grid {
+  @apply grid gap-3 xl:grid-cols-2;
 }
 
 ::selection {
@@ -128,7 +152,7 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 input, select, textarea {
-  @apply w-full rounded-2xl border border-border bg-white/80 p-3 text-base shadow-sm backdrop-blur-sm transition-all;
+  @apply w-full rounded-2xl border border-border bg-white/80 px-3.5 py-2.5 text-sm shadow-sm backdrop-blur-sm transition-all;
   @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
   @apply min-h-[44px];
 }
@@ -145,7 +169,7 @@ select {
 
 .btn {
   @apply inline-flex items-center justify-center rounded-2xl text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-  @apply h-11 px-6 py-2 active:scale-95 select-none;
+  @apply h-10 px-4 py-2 active:scale-95 select-none;
   @apply min-h-[44px];
 }
 
@@ -154,32 +178,36 @@ select {
 .btn-warning { @apply bg-warning text-warning-foreground hover:bg-warning/90; }
 .btn-secondary { @apply border border-border bg-card/85 text-heading hover:bg-background; }
 .btn-ghost { @apply text-foreground hover:bg-background/80; }
-.btn-sm { @apply h-9 rounded-md px-3 text-xs min-h-[36px]; }
+.btn-sm { @apply h-8 rounded-xl px-3 text-xs min-h-[34px]; }
 
 table { @apply w-full text-sm; }
-th { @apply p-3 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
-td { @apply border-b border-border p-3 align-middle; }
+th { @apply p-2.5 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
+td { @apply border-b border-border p-2.5 align-middle; }
 tr:last-child td { @apply border-b-0; }
 tbody tr { @apply transition-colors; }
 tbody tr:hover { @apply bg-background/70; }
 tfoot td { @apply font-bold text-heading; }
 
+.table-compact th { @apply py-[var(--density-2)] px-[var(--density-1)]; }
+.table-compact td { @apply py-[var(--density-2)] px-[var(--density-1)]; }
+.table-scroll { @apply w-full overflow-x-auto; }
+
 .status-pill { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold; }
 
 .erp-surface {
-  @apply rounded-[28px] border border-slate-200/80 bg-white/88 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
+  @apply rounded-[24px] border border-slate-200/80 bg-white/88 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
 }
 
 .erp-section-title {
-  @apply text-lg font-black tracking-tight text-slate-900 dark:text-slate-50;
+  @apply text-base font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg;
 }
 
 .erp-section-text {
-  @apply text-sm leading-7 text-slate-500 dark:text-slate-400;
+  @apply text-sm leading-6 text-slate-500 dark:text-slate-400;
 }
 
 .erp-empty {
-  @apply rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/55 dark:text-slate-400;
+  @apply rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/55 dark:text-slate-400;
 }
 
 .erp-table-card {
@@ -192,6 +220,22 @@ tfoot td { @apply font-bold text-heading; }
 
 .erp-chip {
   @apply inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
+}
+
+.erp-stack {
+  @apply space-y-3;
+}
+
+.erp-metric {
+  @apply text-[1.4rem] font-black tracking-tight text-slate-900 dark:text-slate-50;
+}
+
+.erp-subtle {
+  @apply text-xs font-semibold text-slate-500 dark:text-slate-400;
+}
+
+.erp-inline-actions {
+  @apply flex flex-wrap items-center gap-2;
 }
 
 .page-enter {
@@ -211,20 +255,20 @@ tfoot td { @apply font-bold text-heading; }
 
 @media (max-width: 768px) {
   .app-page {
-    @apply space-y-4;
+    @apply space-y-3;
   }
 
   .erp-panel,
   .erp-toolbar {
-    @apply rounded-[20px] p-3.5;
+    @apply rounded-[18px] p-3;
   }
 
   .responsive-table thead { display: none; }
   .responsive-table tr {
-    @apply block bg-card mb-4 rounded-xl border border-border p-4 shadow-sm;
+    @apply mb-3 block rounded-xl border border-border bg-card p-3 shadow-sm;
   }
   .responsive-table td {
-    @apply flex justify-between items-center py-3 border-b border-border/50;
+    @apply flex items-center justify-between border-b border-border/50 py-2.5;
     @apply text-left;
   }
   .responsive-table tr td:last-child { @apply border-0 pb-1; }
@@ -244,5 +288,3 @@ tfoot td { @apply font-bold text-heading; }
     @apply w-full justify-center;
   }
 }
-
-#root { min-height: 100vh; display: flex; flex-direction: column; }

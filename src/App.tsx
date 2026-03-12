@@ -3,6 +3,7 @@ import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { supabase } from './lib/supabase';
 import AppShell from './components/layout/AppShell';
 import { AppProvider } from './contexts/AppContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Lazy load pages
 const Owners = lazy(() => import('./pages/Owners'));
@@ -30,6 +31,8 @@ const Commissions = lazy(() => import('./pages/Commissions'));
 const PropertyMap = lazy(() => import('./pages/PropertyMap'));
 const System = lazy(() => import('./pages/System'));
 const OwnerLedgerReport = lazy(() => import('./pages/OwnerLedgerReport'));
+const PrintContract = lazy(() => import('./pages/print/PrintContract'));
+const PrintReceipt = lazy(() => import('./pages/print/PrintReceipt'));
 const OwnerView = lazy(() => import('./pages/OwnerView'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -72,6 +75,8 @@ const AppRoutes = () => {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/portal/:ownerId" element={<OwnerView />} />
+        <Route path="/print/contract/:id" element={<PrintContract />} />
+        <Route path="/print/receipt/:id" element={<PrintReceipt />} />
         
         <Route element={<ProtectedRoute><AppShell /></ProtectedRoute>}>
           <Route path="/" element={<Dashboard />} />
@@ -108,11 +113,13 @@ const AppRoutes = () => {
 
 const App: React.FC = () => {
   return (
-    <AppProvider>
-      <Router>
-        <AppRoutes />
-      </Router>
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <Router>
+          <AppRoutes />
+        </Router>
+      </AppProvider>
+    </ErrorBoundary>
   );
 };
 
