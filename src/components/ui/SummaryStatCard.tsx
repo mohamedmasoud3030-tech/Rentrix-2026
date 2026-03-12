@@ -23,15 +23,15 @@ const SummaryStatCard: React.FC<SummaryStatCardProps> = ({ label, title, value, 
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-[28px] border border-slate-200/80 bg-white/90 p-5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:border-slate-800/90 dark:bg-slate-900/88">
+    <div className="group relative overflow-hidden rounded-[22px] border border-slate-200/80 bg-white/90 p-3.5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:border-slate-800/90 dark:bg-slate-900/88">
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-slate-700/70" />
       <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" />
-      <div className="flex items-start gap-4">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-[18px] ${colorClasses[color]}`}>{icon}</div>
+      <div className="flex items-start gap-3">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-[14px] ${colorClasses[color]}`}>{icon}</div>
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{title || label}</p>
-          <p className="mt-2 break-words text-[1.65rem] font-black tracking-tight text-slate-900 dark:text-slate-50">{value}</p>
-          {subtext && <p className="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400">{subtext}</p>}
+          <p className="text-[10px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{title || label}</p>
+          <p className="mt-1 break-words text-[1.25rem] font-black tracking-tight text-slate-900 dark:text-slate-50">{value}</p>
+          {subtext && <p className="mt-0.5 text-[11px] leading-5 text-slate-500 dark:text-slate-400">{subtext}</p>}
         </div>
       </div>
     </div>

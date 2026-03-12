@@ -103,6 +103,26 @@ h1, h2, h3, h4, h5, h6 {
   letter-spacing: -0.02em;
 }
 
+.app-page {
+  @apply mx-auto w-full max-w-[1600px] space-y-4;
+}
+
+.erp-panel {
+  @apply rounded-[24px] border border-slate-200/80 bg-white/90 p-4 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
+}
+
+.erp-toolbar {
+  @apply flex flex-col gap-2.5 rounded-[22px] border border-slate-200/70 bg-white/80 p-3 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 md:flex-row md:items-center md:justify-between;
+}
+
+.erp-kicker {
+  @apply text-[11px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500;
+}
+
+.erp-grid-auto {
+  @apply grid gap-4 sm:grid-cols-2 xl:grid-cols-4;
+}
+
 ::selection {
   background: rgb(14 165 233 / 0.18);
 }
@@ -137,8 +157,8 @@ select {
 .btn-sm { @apply h-9 rounded-md px-3 text-xs min-h-[36px]; }
 
 table { @apply w-full text-sm; }
-th { @apply p-4 text-right text-[11px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
-td { @apply border-b border-border p-4 align-middle; }
+th { @apply p-3 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
+td { @apply border-b border-border p-3 align-middle; }
 tr:last-child td { @apply border-b-0; }
 tbody tr { @apply transition-colors; }
 tbody tr:hover { @apply bg-background/70; }
@@ -158,6 +178,22 @@ tfoot td { @apply font-bold text-heading; }
   @apply text-sm leading-7 text-slate-500 dark:text-slate-400;
 }
 
+.erp-empty {
+  @apply rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/55 dark:text-slate-400;
+}
+
+.erp-table-card {
+  @apply overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/90 shadow-sm dark:border-slate-700 dark:bg-slate-900/85;
+}
+
+.erp-alert {
+  @apply rounded-2xl border px-3.5 py-3 text-sm font-medium;
+}
+
+.erp-chip {
+  @apply inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
+}
+
 .page-enter {
   animation: page-enter 220ms ease-out;
 }
@@ -174,6 +210,15 @@ tfoot td { @apply font-bold text-heading; }
 }
 
 @media (max-width: 768px) {
+  .app-page {
+    @apply space-y-4;
+  }
+
+  .erp-panel,
+  .erp-toolbar {
+    @apply rounded-[20px] p-3.5;
+  }
+
   .responsive-table thead { display: none; }
   .responsive-table tr {
     @apply block bg-card mb-4 rounded-xl border border-border p-4 shadow-sm;
@@ -195,6 +240,9 @@ tfoot td { @apply font-bold text-heading; }
 @media (max-width: 640px) {
   .modal-content { @apply fixed inset-0 rounded-none max-w-none w-full h-full overflow-y-auto; }
   .modal-container { @apply p-0; }
+  .btn {
+    @apply w-full justify-center;
+  }
 }
 
 #root { min-height: 100vh; display: flex; flex-direction: column; }

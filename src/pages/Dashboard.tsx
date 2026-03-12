@@ -2,10 +2,10 @@ import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
+  ArrowLeft,
   Building2,
   FileText,
   Home,
-  MapPin,
   RefreshCw,
   Receipt,
   Users,
@@ -15,22 +15,21 @@ import {
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import KpiCard from '../components/ui/KpiCard';
+import SummaryStatCard from '../components/ui/SummaryStatCard';
+import TableWrapper, { Td, Th, Tr } from '../components/ui/TableWrapper';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency } from '../utils/helpers';
 
-type TrendPoint = { label: string; value: number };
-type StackedPoint = { label: string; opened: number; closed: number; urgent: number };
-type MapPoint = {
+type TrendPoint = {
+  label: string;
+  value: number;
+};
+
+type AlertRow = {
   id: string;
-  name: string;
-  owner: string;
-  location: string;
-  occupancy: number;
-  units: number;
-  revenue: number;
-  x: number;
-  y: number;
-  tone: 'emerald' | 'amber' | 'rose';
+  title: string;
+  detail: string;
+  path: string;
 };
 
 const propertyTypeLabels: Record<string, string> = {
@@ -44,9 +43,6 @@ const propertyTypeLabels: Record<string, string> = {
   OTHER: 'أخرى',
 };
 
-const displayPropertyType = (value: string | null | undefined) => propertyTypeLabels[value || 'OTHER'] || 'أخرى';
-const displayUnitName = (unit: { name?: string | null; unitNumber?: string | null } | undefined) => unit?.name || unit?.unitNumber || 'غير محددة';
-
 const monthLabel = (offset: number) =>
   new Intl.DateTimeFormat('ar', { month: 'short' }).format(new Date(new Date().getFullYear(), new Date().getMonth() + offset, 1));
 
@@ -58,12 +54,11 @@ const Dashboard: React.FC = () => {
   const data = useMemo(() => {
     const activeContracts = db.contracts.filter((contract) => contract.status === 'ACTIVE');
     const activeUnitIds = new Set(activeContracts.map((contract) => contract.unitId));
+    const overdueInvoices = db.invoices.filter((invoice) => {
+      if (!['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)) return false;
+      return new Date(invoice.dueDate).getTime() < Date.now();
+    });
     const openMaintenance = db.maintenanceRecords.filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status));
-    const overdueInvoices = db.invoices.filter(
-      (invoice) =>
-        ['OVERDUE', 'UNPAID', 'PARTIALLY_PAID'].includes(invoice.status) &&
-        new Date(invoice.dueDate).getTime() < Date.now()
-    );
 
     const unitsByProperty = new Map<string, typeof db.units>();
     db.units.forEach((unit) => {
@@ -72,37 +67,39 @@ const Dashboard: React.FC = () => {
       unitsByProperty.set(unit.propertyId, current);
     });
 
-    const ownersById = new Map(db.owners.map((owner) => [owner.id, owner.name]));
-    const propertiesWithStats = db.properties.map((property, index) => {
+    const propertyRows = db.properties.map((property) => {
       const units = unitsByProperty.get(property.id) || [];
       const occupied = units.filter((unit) => activeUnitIds.has(unit.id)).length;
-      const maintenance = units.filter((unit) => unit.status === 'MAINTENANCE').length;
-      const vacant = Math.max(units.length - occupied - maintenance, 0);
-      const propertyContracts = activeContracts.filter((contract) => units.some((unit) => unit.id === contract.unitId));
-      const revenue = propertyContracts.reduce((sum, contract) => sum + (contract.rent || 0), 0);
-      const occupancy = units.length ? (occupied / units.length) * 100 : 0;
-      const tone: MapPoint['tone'] = occupancy >= 85 ? 'emerald' : occupancy >= 60 ? 'amber' : 'rose';
+      const underMaintenance = units.filter((unit) => unit.status === 'MAINTENANCE').length;
+      const vacant = Math.max(units.length - occupied - underMaintenance, 0);
+      const contracts = activeContracts.filter((contract) => units.some((unit) => unit.id === contract.unitId));
+      const revenue = contracts.reduce((sum, contract) => sum + (contract.rent || 0), 0);
+      const occupancyRate = units.length ? (occupied / units.length) * 100 : 0;
+      const owner = db.owners.find((ownerItem) => ownerItem.id === property.ownerId);
 
       return {
-        ...property,
-        ownerName: ownersById.get(property.ownerId) || 'غير محدد',
-        unitsCount: units.length,
+        property,
+        units,
         occupied,
-        maintenance,
+        underMaintenance,
         vacant,
         revenue,
-        occupancy,
-        x: 18 + ((index * 17) % 64),
-        y: 22 + ((index * 13) % 56),
-        tone,
+        occupancyRate,
+        ownerName: owner?.name || 'غير محدد',
       };
     });
 
     const totalUnits = db.units.length;
-    const leasedUnits = propertiesWithStats.reduce((sum, property) => sum + property.occupied, 0);
-    const vacantUnits = propertiesWithStats.reduce((sum, property) => sum + property.vacant, 0);
+    const leasedUnits = propertyRows.reduce((sum, row) => sum + row.occupied, 0);
+    const vacantUnits = propertyRows.reduce((sum, row) => sum + row.vacant, 0);
     const monthlyRevenue = activeContracts.reduce((sum, contract) => sum + (contract.rent || 0), 0);
-    const overduePayments = overdueInvoices.reduce((sum, invoice) => sum + Math.max((invoice.amount || 0) - (invoice.paidAmount || 0), 0), 0);
+    const overdueAmount = overdueInvoices.reduce((sum, invoice) => sum + Math.max((invoice.amount || 0) - (invoice.paidAmount || 0), 0), 0);
+    const expensesThisMonth = db.expenses
+      .filter((expense) => {
+        const ts = new Date(expense.date).getMonth();
+        return ts === new Date().getMonth() && expense.status !== 'VOID';
+      })
+      .reduce((sum, expense) => sum + (expense.amount || 0), 0);
 
     const revenueTrend: TrendPoint[] = Array.from({ length: 6 }, (_, index) => {
       const date = new Date(new Date().getFullYear(), new Date().getMonth() - (5 - index), 1);
@@ -118,334 +115,345 @@ const Dashboard: React.FC = () => {
       return { label: monthLabel(index - 5), value };
     });
 
-    const occupancyTrend: TrendPoint[] = Array.from({ length: 6 }, (_, index) => {
-      const factor = 0.82 + index * 0.025;
-      return { label: monthLabel(index - 5), value: Number(((leasedUnits / Math.max(totalUnits, 1)) * 100 * factor).toFixed(1)) };
-    });
+    const occupancyTrend: TrendPoint[] = Array.from({ length: 6 }, (_, index) => ({
+      label: monthLabel(index - 5),
+      value: Number((((leasedUnits / Math.max(totalUnits, 1)) * 100) * (0.9 + index * 0.02)).toFixed(1)),
+    }));
 
-    const contractsTrend: StackedPoint[] = Array.from({ length: 6 }, (_, index) => {
-      const monthDate = new Date(new Date().getFullYear(), new Date().getMonth() - (5 - index), 1);
-      const start = monthDate.getTime();
-      const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1).getTime();
-      const signed = db.contracts.filter((contract) => {
-        const ts = new Date(contract.start).getTime();
-        return ts >= start && ts < end;
-      }).length;
-      const expiring = db.contracts.filter((contract) => {
-        const ts = new Date(contract.end).getTime();
-        return ts >= start && ts < end;
-      }).length;
-
-      return {
-        label: monthLabel(index - 5),
-        opened: signed,
-        closed: Math.max(Math.round(signed * 0.65), 0),
-        urgent: expiring,
-      };
-    });
-
-    const maintenanceTrend: StackedPoint[] = Array.from({ length: 6 }, (_, index) => {
-      const monthDate = new Date(new Date().getFullYear(), new Date().getMonth() - (5 - index), 1);
-      const start = monthDate.getTime();
-      const end = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 1).getTime();
-      const opened = db.maintenanceRecords.filter((record) => {
-        const ts = new Date(record.requestDate).getTime();
-        return ts >= start && ts < end;
-      }).length;
-      const closed = db.maintenanceRecords.filter((record) => {
-        const ts = Number(record.completedAt || 0);
-        return ts >= start && ts < end && ['COMPLETED', 'CLOSED'].includes(record.status);
-      }).length;
-      const urgent = db.maintenanceRecords.filter((record) => {
-        const ts = new Date(record.requestDate).getTime();
-        return ts >= start && ts < end && ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status) && (record.cost || 0) > 500;
-      }).length;
-
-      return { label: monthLabel(index - 5), opened, closed, urgent };
-    });
-
-    const typeBreakdown = Object.entries(
-      propertiesWithStats.reduce<Record<string, number>>((acc, property) => {
-        const label = displayPropertyType(property.propertyType);
-        acc[label] = (acc[label] || 0) + 1;
-        return acc;
-      }, {})
-    );
-
-    const statusBreakdown = [
-      { label: 'مؤجرة', value: leasedUnits },
-      { label: 'شاغرة', value: vacantUnits },
-      { label: 'صيانة', value: propertiesWithStats.reduce((sum, property) => sum + property.maintenance, 0) },
-    ];
-
-    const ownerBreakdown = Object.entries(
-      propertiesWithStats.reduce<Record<string, number>>((acc, property) => {
-        acc[property.ownerName] = (acc[property.ownerName] || 0) + property.revenue;
-        return acc;
-      }, {})
-    );
-
-    const locationBreakdown = Object.entries(
-      propertiesWithStats.reduce<Record<string, number>>((acc, property) => {
-        const label = property.city || property.district || 'غير محدد';
-        acc[label] = (acc[label] || 0) + 1;
-        return acc;
-      }, {})
-    );
-
-    const alerts = [
+    const alerts: AlertRow[] = [
       ...db.contracts
-        .filter((contract) => contract.status === 'ACTIVE' && new Date(contract.end).getTime() - Date.now() <= 30 * 24 * 60 * 60 * 1000 && new Date(contract.end).getTime() >= Date.now())
+        .filter((contract) => {
+          if (contract.status !== 'ACTIVE') return false;
+          const days = Math.ceil((new Date(contract.end).getTime() - Date.now()) / 86400000);
+          return days >= 0 && days <= 30;
+        })
         .slice(0, 2)
         .map((contract) => ({
           id: contract.id,
           title: 'عقد يقترب من الانتهاء',
-          detail: `العقد ينتهي بتاريخ ${new Date(contract.end).toLocaleDateString('ar')}.`,
-          tone: 'amber',
+          detail: `ينتهي بتاريخ ${new Date(contract.end).toLocaleDateString('ar')}`,
           path: '/contracts',
         })),
       ...overdueInvoices.slice(0, 2).map((invoice) => ({
         id: invoice.id,
         title: 'فاتورة متأخرة',
-        detail: `الرصيد المتبقي ${formatCurrency(Math.max((invoice.amount || 0) - (invoice.paidAmount || 0), 0), currency)}.`,
-        tone: 'rose',
+        detail: `الرصيد المتبقي ${formatCurrency(Math.max((invoice.amount || 0) - (invoice.paidAmount || 0), 0), currency)}`,
         path: '/invoices',
       })),
       ...openMaintenance.slice(0, 2).map((record) => ({
         id: record.id,
         title: 'طلب صيانة مفتوح',
         detail: record.issueTitle,
-        tone: 'amber',
         path: '/maintenance',
       })),
-      ...propertiesWithStats
-        .filter((property) => property.vacant >= 2)
-        .slice(0, 2)
-        .map((property) => ({
-          id: property.id,
-          title: 'عقار بحاجة إلى معالجة الشواغر',
-          detail: `${property.name} يحتوي على ${property.vacant.toLocaleString('ar')} وحدات شاغرة.`,
-          tone: 'amber',
-          path: '/properties',
-        })),
     ].slice(0, 6);
 
-    const leasingActivities = db.contracts
+    const recentContracts = activeContracts
       .slice()
       .sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime())
       .slice(0, 5)
-      .map((contract) => ({
-        id: contract.id,
-        title: `عقد لوحدة ${displayUnitName(db.units.find((unit) => unit.id === contract.unitId))}`,
-        subtitle: db.tenants.find((tenant) => tenant.id === contract.tenantId)?.name || 'مستأجر غير معروف',
-        value: formatCurrency(contract.rent || 0, currency),
-        date: new Date(contract.start).toLocaleDateString('ar'),
-      }));
+      .map((contract) => {
+        const tenant = db.tenants.find((item) => item.id === contract.tenantId);
+        const unit = db.units.find((item) => item.id === contract.unitId);
+        const property = unit ? db.properties.find((item) => item.id === unit.propertyId) : undefined;
+        return {
+          id: contract.id,
+          contractNo: contract.no || contract.id.slice(0, 8),
+          tenant: tenant?.name || 'غير محدد',
+          unit: unit?.name || unit?.unitNumber || 'غير محددة',
+          property: property?.name || 'غير محدد',
+          rent: contract.rent || 0,
+          start: contract.start,
+        };
+      });
 
-    const maintenanceActivities = db.maintenanceRecords
+    const operationsSummary = [
+      { label: 'العقارات', value: db.properties.length, icon: <Building2 size={18} /> },
+      { label: 'الوحدات', value: totalUnits, icon: <Home size={18} /> },
+      { label: 'المستأجرون', value: db.tenants.length, icon: <Users size={18} /> },
+      { label: 'طلبات الصيانة', value: openMaintenance.length, icon: <Wrench size={18} /> },
+    ];
+
+    const occupancyTop = propertyRows
       .slice()
-      .sort((a, b) => new Date(b.requestDate).getTime() - new Date(a.requestDate).getTime())
+      .sort((a, b) => b.occupancyRate - a.occupancyRate)
       .slice(0, 5)
-      .map((record) => ({
-        id: record.id,
-        title: record.issueTitle,
-        subtitle: db.properties.find((property) => property.id === record.propertyId)?.name || 'عقار غير معروف',
-        value: formatCurrency(record.cost || 0, currency),
-        date: new Date(record.requestDate).toLocaleDateString('ar'),
+      .map((row) => ({
+        label: row.property.name,
+        value: Number(row.occupancyRate.toFixed(1)),
       }));
 
-    const mapPoints: MapPoint[] = propertiesWithStats.map((property) => ({
-      id: property.id,
-      name: property.name,
-      owner: property.ownerName,
-      location: [property.district, property.city].filter(Boolean).join(' - ') || 'غير محدد',
-      occupancy: property.occupancy,
-      units: property.unitsCount,
-      revenue: property.revenue,
-      x: property.x,
-      y: property.y,
-      tone: property.tone,
-    }));
+    const ownerRevenue = propertyRows
+      .reduce<Record<string, number>>((acc, row) => {
+        acc[row.ownerName] = (acc[row.ownerName] || 0) + row.revenue;
+        return acc;
+      }, {});
 
     return {
-      activeContracts,
       totalUnits,
       leasedUnits,
       vacantUnits,
+      activeContractsCount: activeContracts.length,
       monthlyRevenue,
-      overduePayments,
-      openMaintenance,
-      overdueInvoices,
-      propertiesWithStats,
+      overdueAmount,
+      expensesThisMonth,
+      openMaintenanceCount: openMaintenance.length,
       revenueTrend,
       occupancyTrend,
-      contractsTrend,
-      maintenanceTrend,
-      typeBreakdown,
-      statusBreakdown,
-      ownerBreakdown,
-      locationBreakdown,
       alerts,
-      leasingActivities,
-      maintenanceActivities,
-      mapPoints,
+      recentContracts,
+      operationsSummary,
+      occupancyTop,
+      ownerRevenue: Object.entries(ownerRevenue).slice(0, 5),
+      propertyRows: propertyRows.slice(0, 6),
     };
-  }, [currency, db.contracts, db.invoices, db.maintenanceRecords, db.owners, db.properties, db.receipts, db.tenants, db.units]);
+  }, [currency, db]);
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="page-enter space-y-6" dir="rtl">
       <PageHeader
         title="لوحة القيادة التنفيذية"
-        description="متابعة محفظة العقارات والتأجير الخارجي والتحصيلات والصيانة من شاشة تشغيل مركزية."
+        description="نظرة تشغيلية ومالية مركزية على العقارات والوحدات والعقود والتحصيل والصيانة في تجربة ERP موحدة."
       >
-        <div className="flex items-center gap-3">
-          <div className="hidden rounded-2xl border border-slate-200 bg-white px-4 py-2 text-right dark:border-slate-700 dark:bg-slate-900 lg:block">
-            <div className="text-[11px] font-semibold text-slate-400">آخر تحديث</div>
-            <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">{new Date().toLocaleString('ar')}</div>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="rounded-2xl border border-slate-200/80 bg-white/80 px-4 py-2 text-right text-sm shadow-sm dark:border-slate-700 dark:bg-slate-900/80">
+            <div className="text-[11px] font-extrabold tracking-[0.16em] text-slate-400 dark:text-slate-500">آخر تحديث</div>
+            <div className="mt-1 font-bold text-slate-900 dark:text-slate-100">{new Date().toLocaleString('ar')}</div>
           </div>
-          <button onClick={rebuildFinancials} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800">
-            <RefreshCw size={15} />
+          <button onClick={rebuildFinancials} className="btn btn-primary">
+            <RefreshCw size={16} />
             تحديث القيود
           </button>
         </div>
       </PageHeader>
 
       <div className="grid gap-6 xl:grid-cols-[1.45fr_0.95fr]">
-        <div className="relative overflow-hidden rounded-[28px] border border-sky-100 bg-[linear-gradient(135deg,#dbeafe_0%,#eff6ff_42%,#f8fafc_100%)] p-8 text-slate-900 shadow-brand-lg dark:border-slate-700 dark:bg-[linear-gradient(135deg,#1e3a5f_0%,#234968_45%,#2b5372_100%)] dark:text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(59,130,246,0.18),_transparent_28%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.14),_transparent_24%)]" />
-          <div className="relative">
-            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/70 px-3 py-1 text-xs font-semibold text-slate-700 dark:border-white/15 dark:bg-white/10 dark:text-slate-200">
+        <Card className="overflow-hidden p-0">
+          <div className="bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(255,255,255,0.9)_45%,rgba(59,130,246,0.08))] p-6 dark:bg-[linear-gradient(135deg,rgba(14,165,233,0.14),rgba(15,23,42,0.9)_45%,rgba(59,130,246,0.12))]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-sky-200 bg-white/80 px-3 py-1 text-xs font-bold text-slate-700 dark:border-sky-400/20 dark:bg-slate-900/70 dark:text-slate-200">
               <Building2 size={14} />
-              نظرة تنفيذية
+              لوحة تنفيذية
             </div>
-            <h2 className="mt-5 text-3xl font-bold tracking-tight">مرحبًا {currentUser?.username || 'بك'}.</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600 dark:text-slate-300">
-              هذه اللوحة تعرض مؤشرات التشغيل الفعلية للعقارات والوحدات والعقود والتحصيلات وطلبات الصيانة من نفس البيانات الحية داخل النظام.
+            <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              أهلاً {currentUser?.username || 'بك'} في Rentrix
+            </h2>
+            <p className="mt-3 max-w-3xl text-sm leading-8 text-slate-600 dark:text-slate-300">
+              هذه الشاشة تجمع أهم مؤشرات المكتب التنفيذية يوميًا: الإشغال، الإيرادات، المتأخرات، الصيانة المفتوحة، وحركة العقود.
             </p>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <HeroMetric label="نسبة الإشغال" value={`${((data.leasedUnits / Math.max(data.totalUnits, 1)) * 100).toFixed(1)}%`} />
-              <HeroMetric label="عدد العقود النشطة" value={data.activeContracts.length.toLocaleString('ar')} />
-              <HeroMetric label="عدد العقارات" value={data.propertiesWithStats.length.toLocaleString('ar')} />
+            <div className="mt-6 grid gap-4 sm:grid-cols-3">
+              <SummaryStatCard title="نسبة الإشغال" value={`${((data.leasedUnits / Math.max(data.totalUnits, 1)) * 100).toFixed(1)}%`} color="blue" icon={<Home size={18} />} />
+              <SummaryStatCard title="العقود النشطة" value={data.activeContractsCount.toLocaleString('ar')} color="emerald" icon={<FileText size={18} />} />
+              <SummaryStatCard title="طلبات الصيانة المفتوحة" value={data.openMaintenanceCount.toLocaleString('ar')} color="amber" icon={<Wrench size={18} />} />
             </div>
-
-            <div className="mt-8 flex flex-wrap items-center gap-3">
-              <button onClick={() => navigate('/contracts')} className="inline-flex items-center gap-2 rounded-2xl bg-slate-950 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-800 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100">
-                <FileText size={15} />
-                العقود
+            <div className="mt-6 flex flex-wrap gap-3">
+              <button onClick={() => navigate('/contracts')} className="btn btn-primary">
+                إدارة العقود
               </button>
-              <button onClick={() => navigate('/maintenance')} className="inline-flex items-center gap-2 rounded-2xl border border-slate-300 bg-white/65 px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-white dark:border-white/15 dark:bg-white/10 dark:text-white dark:hover:bg-white/15">
-                <Wrench size={15} />
-                الصيانة
+              <button onClick={() => navigate('/reports')} className="btn btn-secondary">
+                مركز التقارير
+                <ArrowLeft size={15} />
               </button>
             </div>
           </div>
-        </div>
+        </Card>
 
         <Card className="p-6">
-          <div className="space-y-4">
-            <PulseRow label="الإيراد الشهري الجاري" value={formatCurrency(data.monthlyRevenue, currency)} note={`${data.activeContracts.length.toLocaleString('ar')} عقدًا نشطًا`} />
-            <PulseRow label="المتأخرات الحالية" value={formatCurrency(data.overduePayments, currency)} note={`${data.overdueInvoices.length.toLocaleString('ar')} فاتورة بحاجة متابعة`} />
-            <PulseRow label="طلبات الصيانة المفتوحة" value={data.openMaintenance.length.toLocaleString('ar')} note="الأولوية لاستكمال الطلبات المتعثرة" />
+          <h3 className="erp-section-title">تنبيهات تحتاج متابعة</h3>
+          <p className="erp-section-text mt-1">تنبيهات مرتبطة بالاستحقاقات والتأخير والصيانة المفتوحة.</p>
+          <div className="mt-5 space-y-3">
+            {data.alerts.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400">
+                لا توجد تنبيهات حرجة حالياً.
+              </div>
+            ) : (
+              data.alerts.map((alert) => (
+                <button
+                  key={alert.id}
+                  onClick={() => navigate(alert.path)}
+                  className="flex w-full items-start gap-3 rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-4 text-right transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900/80 dark:hover:border-slate-600"
+                >
+                  <span className="mt-0.5 flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-2xl bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
+                    <AlertTriangle size={17} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-bold text-slate-900 dark:text-slate-100">{alert.title}</span>
+                    <span className="mt-1 block text-sm leading-7 text-slate-500 dark:text-slate-400">{alert.detail}</span>
+                  </span>
+                </button>
+              ))
+            )}
           </div>
         </Card>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-7">
-        <KpiCard title="إجمالي العقارات" value={data.propertiesWithStats.length.toLocaleString('ar')} color="blue" icon={<Building2 size={18} />} trend="محفظة الإدارة" trendUp />
-        <KpiCard title="الوحدات المؤجرة" value={data.leasedUnits.toLocaleString('ar')} color="green" icon={<Home size={18} />} trend={`${((data.leasedUnits / Math.max(data.totalUnits, 1)) * 100).toFixed(1)}% إشغال`} trendUp />
-        <KpiCard title="الوحدات الشاغرة" value={data.vacantUnits.toLocaleString('ar')} color="yellow" icon={<Home size={18} />} trend="تحتاج تسويقًا" />
-        <KpiCard title="العقود النشطة" value={data.activeContracts.length.toLocaleString('ar')} color="purple" icon={<FileText size={18} />} trend="تشغيل فعلي" trendUp />
-        <KpiCard title="الإيراد الشهري" value={formatCurrency(data.monthlyRevenue, currency)} color="green" icon={<Wallet size={18} />} trend="من العقود الجارية" trendUp />
-        <KpiCard title="المتأخرات" value={formatCurrency(data.overduePayments, currency)} color="red" icon={<Receipt size={18} />} trend="تحتاج تحصيلًا" />
-        <KpiCard title="الصيانة المفتوحة" value={data.openMaintenance.length.toLocaleString('ar')} color="yellow" icon={<Wrench size={18} />} trend="طلبات حالية" />
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+        <KpiCard title="إجمالي العقارات" value={db.properties.length.toLocaleString('ar')} color="blue" icon={<Building2 size={18} />} trend="محفظة الإدارة" trendUp />
+        <KpiCard title="عدد الوحدات" value={data.totalUnits.toLocaleString('ar')} color="purple" icon={<Home size={18} />} trend="إجمالي الوحدات المسجلة" trendUp />
+        <KpiCard title="العقود النشطة" value={data.activeContractsCount.toLocaleString('ar')} color="green" icon={<FileText size={18} />} trend="عقود جارية" trendUp />
+        <KpiCard title="الإيرادات الشهرية" value={formatCurrency(data.monthlyRevenue, currency)} color="green" icon={<Wallet size={18} />} trend="من العقود النشطة" trendUp />
+        <KpiCard title="المتأخرات" value={formatCurrency(data.overdueAmount, currency)} color="red" icon={<Receipt size={18} />} trend="فواتير تحتاج تحصيل" />
+        <KpiCard title="المصروفات" value={formatCurrency(data.expensesThisMonth, currency)} color="yellow" icon={<Wrench size={18} />} trend="مصروفات هذا الشهر" />
+      </div>
+
+      <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <Card className="p-6">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="erp-section-title">التحليل المالي والإشغال</h3>
+              <p className="erp-section-text mt-1">قراءة سريعة لاتجاه الإيرادات والإشغال خلال آخر ستة أشهر.</p>
+            </div>
+          </div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-2">
+            <MetricChart title="الإيرادات الشهرية" data={data.revenueTrend} suffix={currency} />
+            <MetricChart title="اتجاه الإشغال" data={data.occupancyTrend} suffix="%" />
+          </div>
+        </Card>
+
+        <Card className="p-6">
+          <h3 className="erp-section-title">مؤشرات تشغيلية سريعة</h3>
+          <p className="erp-section-text mt-1">لقطات فورية على السجلات الأساسية داخل المكتب.</p>
+          <div className="mt-5 grid gap-4">
+            {data.operationsSummary.map((item) => (
+              <div key={item.label} className="flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-4 dark:border-slate-700 dark:bg-slate-800/55">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white text-slate-700 shadow-sm dark:bg-slate-900 dark:text-slate-200">
+                    {item.icon}
+                  </span>
+                  <div>
+                    <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{item.label}</div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">إجمالي السجلات الحالية</div>
+                  </div>
+                </div>
+                <div className="text-xl font-black text-slate-900 dark:text-slate-100">{item.value.toLocaleString('ar')}</div>
+              </div>
+            ))}
+          </div>
+        </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <ChartCard title="الإيراد الشهري">
-          <LineChart data={data.revenueTrend} formatter={(value) => formatCurrency(value, currency)} color="#16a34a" />
-        </ChartCard>
-        <ChartCard title="اتجاه الإشغال">
-          <LineChart data={data.occupancyTrend} formatter={(value) => `${value.toFixed(1)}%`} color="#2563eb" />
-        </ChartCard>
-        <ChartCard title="نشاط العقود">
-          <StackedChart data={data.contractsTrend} />
-        </ChartCard>
-        <ChartCard title="اتجاه الصيانة">
-          <StackedChart data={data.maintenanceTrend} />
-        </ChartCard>
-      </div>
+        <Card className="p-6">
+          <div className="mb-4">
+            <h3 className="erp-section-title">العقود الحديثة</h3>
+            <p className="erp-section-text mt-1">آخر العقود النشطة مع الإيجار والوحدة والعقار.</p>
+          </div>
+          <TableWrapper>
+            <thead>
+              <Tr>
+                <Th>العقد</Th>
+                <Th>المستأجر</Th>
+                <Th>الوحدة / العقار</Th>
+                <Th>الإيجار</Th>
+                <Th>البداية</Th>
+              </Tr>
+            </thead>
+            <tbody>
+              {data.recentContracts.map((row) => (
+                <Tr key={row.id}>
+                  <Td data-label="العقد">{row.contractNo}</Td>
+                  <Td data-label="المستأجر">{row.tenant}</Td>
+                  <Td data-label="الوحدة / العقار">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-800 dark:text-slate-100">{row.unit}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{row.property}</div>
+                    </div>
+                  </Td>
+                  <Td data-label="الإيجار">{formatCurrency(row.rent, currency)}</Td>
+                  <Td data-label="البداية">{new Date(row.start).toLocaleDateString('ar')}</Td>
+                </Tr>
+              ))}
+            </tbody>
+          </TableWrapper>
+        </Card>
 
-      <div className="grid gap-6 2xl:grid-cols-[1.45fr_0.95fr]">
-        <MapPanel points={data.mapPoints} currency={currency} />
-        <AlertsPanel alerts={data.alerts} onNavigate={navigate} />
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 2xl:grid-cols-4">
-        <BreakdownCard title="حسب نوع العقار" items={data.typeBreakdown.map(([label, value]) => ({ label, value }))} />
-        <BreakdownCard title="حسب الحالة" items={data.statusBreakdown} />
-        <BreakdownCard title="حسب المالك" items={data.ownerBreakdown.map(([label, value]) => ({ label, value }))} formatter={(value) => formatCurrency(value, currency)} />
-        <BreakdownCard title="حسب الموقع" items={data.locationBreakdown.map(([label, value]) => ({ label, value }))} />
+        <Card className="p-6">
+          <div className="mb-4">
+            <h3 className="erp-section-title">أفضل العقارات أداءً</h3>
+            <p className="erp-section-text mt-1">حسب الإشغال والإيراد الشهري الحالي.</p>
+          </div>
+          <TableWrapper>
+            <thead>
+              <Tr>
+                <Th>العقار</Th>
+                <Th>المالك</Th>
+                <Th>الإشغال</Th>
+                <Th>الإيراد</Th>
+                <Th>الحالة</Th>
+              </Tr>
+            </thead>
+            <tbody>
+              {data.propertyRows.map((row) => (
+                <Tr key={row.property.id}>
+                  <Td data-label="العقار">
+                    <div className="space-y-1">
+                      <div className="font-semibold text-slate-800 dark:text-slate-100">{row.property.name}</div>
+                      <div className="text-xs text-slate-500 dark:text-slate-400">{propertyTypeLabels[row.property.propertyType || 'OTHER'] || 'أخرى'}</div>
+                    </div>
+                  </Td>
+                  <Td data-label="المالك">{row.ownerName}</Td>
+                  <Td data-label="الإشغال">{row.occupancyRate.toFixed(1)}%</Td>
+                  <Td data-label="الإيراد">{formatCurrency(row.revenue, currency)}</Td>
+                  <Td data-label="الحالة">
+                    <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${row.occupancyRate >= 85 ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-300' : row.occupancyRate >= 60 ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-300' : 'bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300'}`}>
+                      {row.occupancyRate >= 85 ? 'ممتاز' : row.occupancyRate >= 60 ? 'مستقر' : 'يحتاج متابعة'}
+                    </span>
+                  </Td>
+                </Tr>
+              ))}
+            </tbody>
+          </TableWrapper>
+        </Card>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        <ActivityTable title="آخر نشاط عقود" rows={data.leasingActivities} />
-        <ActivityTable title="آخر نشاط صيانة" rows={data.maintenanceActivities} />
+        <Card className="p-6">
+          <h3 className="erp-section-title">العقارات الأعلى إشغالاً</h3>
+          <div className="mt-5 space-y-4">
+            {data.occupancyTop.map((item) => (
+              <ProgressRow key={item.label} label={item.label} value={item.value} suffix="%" />
+            ))}
+          </div>
+        </Card>
+        <Card className="p-6">
+          <h3 className="erp-section-title">الإيراد حسب المالك</h3>
+          <div className="mt-5 space-y-4">
+            {data.ownerRevenue.map(([label, value]) => (
+              <ProgressRow
+                key={label}
+                label={label}
+                value={value}
+                suffix={formatCurrency(value, currency)}
+                scale={Math.max(...data.ownerRevenue.map(([, amount]) => amount), 1)}
+              />
+            ))}
+          </div>
+        </Card>
       </div>
     </div>
   );
 };
 
-const HeroMetric: React.FC<{ label: string; value: string }> = ({ label, value }) => (
-  <div className="rounded-[26px] border border-white/10 bg-white/10 p-5 backdrop-blur-md shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]">
-    <div className="text-[11px] font-extrabold tracking-[0.16em] text-slate-300">{label}</div>
-    <div className="mt-3 text-[1.75rem] font-black text-white">{value}</div>
-  </div>
-);
-
-const PulseRow: React.FC<{ label: string; value: string; note: string }> = ({ label, value, note }) => (
-  <div className="rounded-[26px] border border-slate-200/80 bg-slate-50/70 p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800/70">
-    <div className="text-[11px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{label}</div>
-    <div className="mt-2 text-[1.7rem] font-black text-slate-900 dark:text-slate-100">{value}</div>
-    <div className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">{note}</div>
-  </div>
-);
-
-const ChartCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <Card className="p-6">
-    <div className="mb-5">
-      <h3 className="text-lg font-black text-slate-900 dark:text-slate-100">{title}</h3>
-      <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">قراءة مباشرة من البيانات الحالية داخل النظام</p>
-    </div>
-    {children}
-  </Card>
-);
-
-const LineChart: React.FC<{ data: TrendPoint[]; formatter: (value: number) => string; color: string }> = ({ data, formatter, color }) => {
+const MetricChart: React.FC<{ title: string; data: TrendPoint[]; suffix: string }> = ({ title, data, suffix }) => {
   const max = Math.max(...data.map((item) => item.value), 1);
-  const points = data
-    .map((item, index) => {
-      const x = (index / Math.max(data.length - 1, 1)) * 100;
-      const y = 100 - (item.value / max) * 85;
-      return `${x},${y}`;
-    })
-    .join(' ');
 
   return (
-    <div className="space-y-4">
-      <svg viewBox="0 0 100 100" className="h-52 w-full overflow-visible">
-        <polyline fill="none" stroke={color} strokeWidth="3" points={points} />
-        {data.map((item, index) => {
-          const x = (index / Math.max(data.length - 1, 1)) * 100;
-          const y = 100 - (item.value / max) * 85;
-          return <circle key={item.label} cx={x} cy={y} r="2.6" fill={color} />;
-        })}
-      </svg>
-      <div className="grid grid-cols-3 gap-3 md:grid-cols-6">
+    <div className="rounded-[24px] border border-slate-200/80 bg-slate-50/60 p-5 dark:border-slate-700 dark:bg-slate-800/45">
+      <div className="mb-4">
+        <h4 className="text-sm font-black text-slate-900 dark:text-slate-100">{title}</h4>
+      </div>
+      <div className="flex h-44 items-end gap-3">
         {data.map((item) => (
-          <div key={item.label} className="rounded-2xl bg-slate-50 p-3 text-center dark:bg-slate-800">
-            <div className="text-xs text-slate-500 dark:text-slate-400">{item.label}</div>
-            <div className="mt-1 text-sm font-bold text-slate-800 dark:text-slate-100">{formatter(item.value)}</div>
+          <div key={item.label} className="flex flex-1 flex-col items-center gap-2">
+            <div className="flex h-36 w-full items-end rounded-2xl bg-white px-2 py-2 dark:bg-slate-900">
+              <div
+                className="w-full rounded-xl bg-gradient-to-t from-sky-600 to-cyan-400 transition-all duration-300"
+                style={{ height: `${Math.max((item.value / max) * 100, 8)}%` }}
+              />
+            </div>
+            <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{item.label}</div>
+            <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">
+              {suffix === '%' ? `${item.value.toFixed(1)}%` : formatCurrency(item.value, suffix)}
+            </div>
           </div>
         ))}
       </div>
@@ -453,139 +461,21 @@ const LineChart: React.FC<{ data: TrendPoint[]; formatter: (value: number) => st
   );
 };
 
-const StackedChart: React.FC<{ data: StackedPoint[] }> = ({ data }) => {
-  const max = Math.max(...data.map((item) => item.opened + item.closed + item.urgent), 1);
+const ProgressRow: React.FC<{ label: string; value: number; suffix: string; scale?: number }> = ({ label, value, suffix, scale }) => {
+  const max = scale || 100;
+  const width = Math.min((value / Math.max(max, 1)) * 100, 100);
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-6 gap-3 items-end h-52">
-        {data.map((item) => {
-          const total = item.opened + item.closed + item.urgent;
-          const opened = (item.opened / max) * 100;
-          const closed = (item.closed / max) * 100;
-          const urgent = (item.urgent / max) * 100;
-
-          return (
-            <div key={item.label} className="flex h-full flex-col justify-end gap-2">
-              <div className="flex h-full flex-col justify-end overflow-hidden rounded-2xl bg-slate-100 dark:bg-slate-800">
-                <div style={{ height: `${urgent}%` }} className="bg-rose-500" />
-                <div style={{ height: `${closed}%` }} className="bg-emerald-500" />
-                <div style={{ height: `${opened}%` }} className="bg-blue-500" />
-              </div>
-              <div className="text-center text-xs text-slate-500 dark:text-slate-400">{item.label}</div>
-            </div>
-          );
-        })}
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-3 text-sm">
+        <span className="font-bold text-slate-800 dark:text-slate-100">{label}</span>
+        <span className="font-bold text-slate-600 dark:text-slate-300">{suffix}</span>
       </div>
-      <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400">
-        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-blue-500" />جديد</span>
-        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />مغلق/مجدد</span>
-        <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full bg-rose-500" />عاجل/منتهٍ</span>
+      <div className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800">
+        <div className="h-2.5 rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" style={{ width: `${width}%` }} />
       </div>
     </div>
   );
 };
-
-const MapPanel: React.FC<{ points: MapPoint[]; currency: string }> = ({ points, currency }) => (
-  <Card className="overflow-hidden">
-    <div className="border-b border-slate-200 px-6 py-5 dark:border-slate-800">
-      <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">خريطة العقارات والتوزيع الجغرافي</h3>
-      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">عرض مصغر للعقارات مع الإشغال والإيراد الحالي لكل عقار.</p>
-    </div>
-    <div className="relative min-h-[420px] overflow-hidden bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.18),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.18),_transparent_28%),linear-gradient(135deg,_#eff6ff,_#ffffff_45%,_#ecfeff)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.12),_transparent_30%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.10),_transparent_28%),linear-gradient(135deg,_#020617,_#0f172a_50%,_#111827)]">
-      {points.map((point) => (
-        <div key={point.id} className="group absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${point.x}%`, top: `${point.y}%` }}>
-          <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-white shadow-xl ${point.tone === 'emerald' ? 'bg-emerald-500' : point.tone === 'amber' ? 'bg-amber-500' : 'bg-rose-500'}`}>
-            <MapPin size={16} />
-          </div>
-          <div className="pointer-events-none absolute left-1/2 top-full z-10 mt-3 hidden w-56 -translate-x-1/2 rounded-2xl border border-slate-200 bg-white/95 p-4 text-right shadow-2xl backdrop-blur group-hover:block dark:border-slate-700 dark:bg-slate-900/95">
-            <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{point.name}</div>
-            <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{point.location}</div>
-            <div className="mt-3 space-y-1 text-xs text-slate-600 dark:text-slate-300">
-              <div>المالك: {point.owner}</div>
-              <div>الإشغال: {point.occupancy.toFixed(1)}%</div>
-              <div>الوحدات: {point.units.toLocaleString('ar')}</div>
-              <div>الإيراد: {formatCurrency(point.revenue, currency)}</div>
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  </Card>
-);
-
-const AlertsPanel: React.FC<{ alerts: Array<{ id: string; title: string; detail: string; tone: string; path: string }>; onNavigate: (path: string) => void }> = ({ alerts, onNavigate }) => (
-  <Card className="p-6">
-    <div className="mb-5 flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-300">
-        <AlertTriangle size={18} />
-      </div>
-      <div>
-        <div className="text-sm font-semibold text-slate-500 dark:text-slate-400">التنبيهات</div>
-        <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">العناصر التي تحتاج تدخلًا</h3>
-      </div>
-    </div>
-    <div className="space-y-3">
-      {alerts.map((alert) => (
-        <button key={alert.id} onClick={() => onNavigate(alert.path)} className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-right transition hover:border-slate-300 hover:shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:hover:border-slate-600">
-          <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{alert.title}</div>
-          <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">{alert.detail}</div>
-        </button>
-      ))}
-      {alerts.length === 0 && <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-500 dark:bg-slate-800 dark:text-slate-400">لا توجد تنبيهات حرجة حاليًا.</div>}
-    </div>
-  </Card>
-);
-
-const BreakdownCard: React.FC<{ title: string; items: Array<{ label: string; value: number }>; formatter?: (value: number) => string }> = ({ title, items, formatter = (value) => value.toLocaleString('ar') }) => {
-  const total = items.reduce((sum, item) => sum + item.value, 0) || 1;
-
-  return (
-    <Card className="p-6">
-      <h3 className="mb-5 text-lg font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-      <div className="space-y-4">
-        {items.slice(0, 5).map((item, index) => {
-          const share = (item.value / total) * 100;
-          const colors = ['bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-rose-500', 'bg-violet-500'];
-          return (
-            <div key={item.label} className="space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="text-sm font-semibold text-slate-800 dark:text-slate-100">{item.label}</div>
-                <div className="text-sm font-bold text-slate-900 dark:text-slate-100">{formatter(item.value)}</div>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800">
-                <div className={`h-2 rounded-full ${colors[index % colors.length]}`} style={{ width: `${share}%` }} />
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-};
-
-const ActivityTable: React.FC<{ title: string; rows: Array<{ id: string; title: string; subtitle: string; value: string; date: string }> }> = ({ title, rows }) => (
-  <Card className="p-6">
-    <h3 className="mb-5 text-xl font-bold text-slate-900 dark:text-slate-100">{title}</h3>
-    <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700">
-      <div className="grid grid-cols-[2fr_1.4fr_1fr_0.9fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400">
-        <div>النشاط</div>
-        <div>التفصيل</div>
-        <div>القيمة</div>
-        <div>التاريخ</div>
-      </div>
-      <div className="divide-y divide-slate-200 dark:divide-slate-700">
-        {rows.map((row) => (
-          <div key={row.id} className="grid grid-cols-[2fr_1.4fr_1fr_0.9fr] gap-4 px-4 py-4 text-sm">
-            <div className="font-semibold text-slate-900 dark:text-slate-100">{row.title}</div>
-            <div className="text-slate-600 dark:text-slate-300">{row.subtitle}</div>
-            <div className="font-medium text-slate-700 dark:text-slate-200">{row.value}</div>
-            <div className="text-slate-500 dark:text-slate-400">{row.date}</div>
-          </div>
-        ))}
-      </div>
-    </div>
-  </Card>
-);
 
 export default Dashboard;

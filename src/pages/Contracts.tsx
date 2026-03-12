@@ -131,15 +131,23 @@ const Contracts: React.FC = () => {
     return { unit, property, owner, tenant, invoices, receipts, expenses, maintenance, overdueInvoices, utilityExpenses, upcomingInvoices };
   }, [db.expenses, db.invoices, db.maintenanceRecords, db.owners, db.properties, db.receipts, db.tenants, db.units, selectedContract]);
 
-  const stats = useMemo(() => {
-    const activeContracts = contractRows.filter((item) => item.status === 'ACTIVE');
-    return {
-      active: activeContracts.length,
-      totalRent: activeContracts.reduce((sum, item) => sum + Number(item.rent || 0), 0),
-      expiring: activeContracts.filter((item) => item.isExpiring).length,
-      overdueBalance: activeContracts.reduce((sum, item) => sum + Math.max(item.balance, 0), 0),
-    };
-  }, [contractRows]);
+  const activeFilterChips = [
+    ...(searchTerm ? [{ key: 'search', label: `\u0628\u062d\u062b: ${searchTerm}` }] : []),
+    ...(statusFilter !== 'ALL'
+      ? [
+          {
+            key: 'status',
+            label: `\u0627\u0644\u062d\u0627\u0644\u0629: ${
+              statusFilter === 'ACTIVE'
+                ? '\u0646\u0634\u0637'
+                : statusFilter === 'ENDED'
+                  ? '\u0645\u0646\u062a\u0647\u064a'
+                  : '\u0645\u0639\u0644\u0642'
+            }`,
+          },
+        ]
+      : []),
+  ];
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -187,7 +195,7 @@ const Contracts: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6" dir="rtl">
+    <div className="app-page page-enter" dir="rtl">
       <PageHeader title="إدارة العقود" description="عرض وتعديل جميع عقود الإيجار وربط التحصيل والطباعة والتجديد من شاشة واحدة.">
         <button onClick={openCreate} className={primaryButton}>
           <PlusCircle size={16} />
@@ -195,15 +203,15 @@ const Contracts: React.FC = () => {
         </button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <SummaryStatCard label="العقود النشطة" value={stats.active.toLocaleString('ar')} icon={<FileText size={20} />} color="blue" />
         <SummaryStatCard label="إجمالي الإيجارات" value={formatCurrency(stats.totalRent, currency)} icon={<DollarSign size={20} />} color="emerald" />
         <SummaryStatCard label="تنتهي قريبًا" value={stats.expiring.toLocaleString('ar')} icon={<Clock size={20} />} color={stats.expiring > 0 ? 'amber' : 'emerald'} />
         <SummaryStatCard label="المتأخرات" value={formatCurrency(stats.overdueBalance, currency)} icon={<AlertTriangle size={20} />} color={stats.overdueBalance > 0 ? 'rose' : 'emerald'} />
       </div>
 
-      <Card className="p-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <Card className="p-4 sm:p-5">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">قائمة العقود</h2>
             <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">العقود مرتبة حسب الأولوية مع أزرار مباشرة للتحصيل والتجديد والطباعة.</p>
@@ -220,19 +228,28 @@ const Contracts: React.FC = () => {
           </div>
         </div>
 
-        <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث باسم المستأجر أو الوحدة أو العقار أو حالة العقد..." />
-
-        <div className="mb-4 flex justify-end">
-          <select className={inputCls} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ALL' | Contract['status'])}>
-            <option value="ALL">كل الحالات</option>
-            <option value="ACTIVE">نشط</option>
-            <option value="ENDED">منتهي</option>
-            <option value="SUSPENDED">معلق</option>
-          </select>
-        </div>
+        <SearchFilterBar
+          value={searchTerm}
+          onSearch={setSearchTerm}
+          placeholder={'\u0628\u062d\u062b \u0628\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u0623\u062c\u0631 \u0623\u0648 \u0627\u0644\u0648\u062d\u062f\u0629 \u0623\u0648 \u0627\u0644\u0639\u0642\u0627\u0631...'}
+          rightSlot={
+            <select className={`${inputCls} min-w-[180px]`} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ALL' | Contract['status'])}>
+              <option value="ALL">{'\u0643\u0644 \u0627\u0644\u062d\u0627\u0644\u0627\u062a'}</option>
+              <option value="ACTIVE">{'\u0646\u0634\u0637'}</option>
+              <option value="ENDED">{'\u0645\u0646\u062a\u0647\u064a'}</option>
+              <option value="SUSPENDED">{'\u0645\u0639\u0644\u0642'}</option>
+            </select>
+          }
+          filterChips={activeFilterChips}
+          onRemoveChip={(key) => {
+            if (key === 'search') setSearchTerm('');
+            if (key === 'status') setStatusFilter('ALL');
+          }}
+          onClearAll={activeFilterChips.length ? () => { setSearchTerm(''); setStatusFilter('ALL'); } : undefined}
+        />
 
         {filteredContracts.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-14 text-center">
+          <div className="erp-empty py-10">
             <FileText size={52} className="text-slate-300 dark:text-slate-700" />
             <h3 className="mt-4 text-xl font-semibold text-slate-800 dark:text-slate-100">لا توجد عقود مطابقة</h3>
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">أضف عقدًا جديدًا أو غيّر عبارة البحث لعرض النتائج.</p>
@@ -314,7 +331,7 @@ const Contracts: React.FC = () => {
 
       {selectedContract && contractWorkspace && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-          <Card className="p-6">
+          <Card className="p-4 sm:p-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل العقد</h3>
@@ -332,14 +349,14 @@ const Contracts: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryStatCard icon={<DollarSign size={18} />} color="emerald" title="الإيجار الشهري" value={formatCurrency(selectedContract.rent, currency)} />
               <SummaryStatCard icon={<AlertTriangle size={18} />} color="rose" title="الرصيد المستحق" value={formatCurrency(selectedContract.balance, currency)} />
               <SummaryStatCard icon={<FileText size={18} />} color="blue" title="الفواتير" value={contractWorkspace.invoices.length.toLocaleString('ar')} />
               <SummaryStatCard icon={<Receipt size={18} />} color="amber" title="الدفعات" value={contractWorkspace.receipts.length.toLocaleString('ar')} />
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                 <div className="text-xs font-bold text-slate-500 dark:text-slate-400">البيانات الأساسية</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
@@ -360,7 +377,7 @@ const Contracts: React.FC = () => {
               </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                 <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">الاستحقاقات القادمة</div>
                 <div className="space-y-2">
@@ -416,8 +433,8 @@ const Contracts: React.FC = () => {
             </div>
           </Card>
 
-          <div className="space-y-6">
-            <Card className="p-6">
+          <div className="space-y-4">
+            <Card className="p-4 sm:p-5">
               <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">التنبيهات والمتابعة</h3>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
@@ -432,7 +449,7 @@ const Contracts: React.FC = () => {
               </div>
             </Card>
 
-            <Card className="p-6">
+            <Card className="p-4 sm:p-5">
               <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">الخدمات والمستندات</h3>
               <div className="mt-4 space-y-4">
                 <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
@@ -658,3 +675,5 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
 };
 
 export default Contracts;
+
+

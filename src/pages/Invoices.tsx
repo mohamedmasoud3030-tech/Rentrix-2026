@@ -24,8 +24,8 @@ import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 const primaryButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-600';
 const ghostButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-sm font-bold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800';
 const successButtonCls = 'inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-500 px-3 py-2 text-xs font-bold text-white shadow-sm transition-colors hover:bg-emerald-600';
-const displayTenantName = (tenant?: { name?: string | null; fullName?: string | null } | null) => tenant?.name || tenant?.fullName || '—';
-const displayUnitName = (unit?: { name?: string | null; unitNumber?: string | null } | null) => unit?.name || unit?.unitNumber || '—';
+const displayTenantName = (tenant?: { name?: string | null; fullName?: string | null } | null) => tenant?.name || tenant?.fullName || 'â€”';
+const displayUnitName = (unit?: { name?: string | null; unitNumber?: string | null } | null) => unit?.name || unit?.unitNumber || 'â€”';
 
 const Invoices: React.FC = () => {
     const { db, financeService } = useApp();
@@ -39,8 +39,14 @@ const Invoices: React.FC = () => {
     const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filters = [ { key: 'all', label: 'الكل' }, { key: 'unpaid', label: 'غير مدفوعة' }, { key: 'overdue', label: 'متأخرة' }, { key: 'paid', label: 'مدفوعة' }];
+    const filters = [ { key: 'all', label: 'Ø§Ù„ÙƒÙ„' }, { key: 'unpaid', label: 'ØºÙŠØ± Ù…Ø¯ÙÙˆØ¹Ø©' }, { key: 'overdue', label: 'Ù…ØªØ£Ø®Ø±Ø©' }, { key: 'paid', label: 'Ù…Ø¯ÙÙˆØ¹Ø©' }];
     const [activeFilter, setActiveFilter] = useState('all');
+    const activeFilterChips = [
+        ...(searchTerm ? [{ key: 'search', label: `Ø¨Ø­Ø«: ${searchTerm}` }] : []),
+        ...(activeFilter !== 'all'
+            ? [{ key: 'status', label: `Ø§Ù„Ø­Ø§Ù„Ø©: ${filters.find((item) => item.key === activeFilter)?.label || activeFilter}` }]
+            : []),
+    ];
 
     useEffect(() => {
         const filterParam = new URLSearchParams(location.search).get('filter') || 'all';
@@ -56,13 +62,13 @@ const Invoices: React.FC = () => {
         setIsMonthlyLoading(true);
         try {
             const count = await financeService.generateMonthlyInvoices();
-            toast.success(`تم إصدار ${count} فاتورة جديدة بنجاح.`);
-        } catch (error) { toast.error(`فشل إصدار الفواتير: ${error instanceof Error ? error.message : 'خطأ غير معروف'}`);
+            toast.success(`ØªÙ… Ø¥ØµØ¯Ø§Ø± ${count} ÙØ§ØªÙˆØ±Ø© Ø¬Ø¯ÙŠØ¯Ø© Ø¨Ù†Ø¬Ø§Ø­.`);
+        } catch (error) { toast.error(`ÙØ´Ù„ Ø¥ØµØ¯Ø§Ø± Ø§Ù„ÙÙˆØ§ØªÙŠØ±: ${error instanceof Error ? error.message : 'Ø®Ø·Ø£ ØºÙŠØ± Ù…Ø¹Ø±ÙˆÙ'}`);
         } finally { setIsMonthlyLoading(false); }
     };
     
     const getInvoiceStatusLabel = (status: Invoice['status']) => {
-        const map: { [key in Invoice['status']]: string } = { 'PAID': 'مدفوعة', 'UNPAID': 'غير مدفوعة', 'PARTIALLY_PAID': 'مدفوعة جزئياً', 'OVERDUE': 'متأخرة', 'VOID': 'ملغاة' };
+        const map: { [key in Invoice['status']]: string } = { 'PAID': 'Ù…Ø¯ÙÙˆØ¹Ø©', 'UNPAID': 'ØºÙŠØ± Ù…Ø¯ÙÙˆØ¹Ø©', 'PARTIALLY_PAID': 'Ù…Ø¯ÙÙˆØ¹Ø© Ø¬Ø²Ø¦ÙŠØ§Ù‹', 'OVERDUE': 'Ù…ØªØ£Ø®Ø±Ø©', 'VOID': 'Ù…Ù„ØºØ§Ø©' };
         return map[status] || status;
     };
 
@@ -126,28 +132,44 @@ const Invoices: React.FC = () => {
     }, [db.contracts, db.owners, db.properties, db.receipts, selectedInvoice]);
 
     return (
-        <div className="space-y-6">
-            <PageHeader title="الفواتير والمطالبات المالية" description="مساحة عمل للفوترة والتحصيل وربط الفاتورة بالمستأجر والعقد والوحدة." />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SummaryStatCard label="إجمالي المتأخرات" value={formatCurrency(summaryData.overdueAmount)} icon={<AlertTriangle size={24}/>} color="danger"/>
-                <SummaryStatCard label="عدد الفواتير المتأخرة" value={summaryData.overdueCount} icon={<Hash size={24}/>} color="danger"/>
-                <SummaryStatCard label="مستحق (غير متأخر)" value={formatCurrency(summaryData.unpaidAmount)} icon={<DollarSign size={24}/>} color="warning"/>
-                <SummaryStatCard label="متوسط أيام التأخير" value={summaryData.avgOverdueDays.toFixed(0)} icon={<Clock size={24}/>} color="warning"/>
+        <div className="app-page page-enter" dir="rtl">
+            <PageHeader title="Ø§Ù„ÙÙˆØ§ØªÙŠØ± ÙˆØ§Ù„Ù…Ø·Ø§Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø§Ù„ÙŠØ©" description="Ù…Ø³Ø§Ø­Ø© Ø¹Ù…Ù„ Ù„Ù„ÙÙˆØªØ±Ø© ÙˆØ§Ù„ØªØ­ØµÙŠÙ„ ÙˆØ±Ø¨Ø· Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ø¨Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø± ÙˆØ§Ù„Ø¹Ù‚Ø¯ ÙˆØ§Ù„ÙˆØ­Ø¯Ø©." />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <SummaryStatCard label="Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…ØªØ£Ø®Ø±Ø§Øª" value={formatCurrency(summaryData.overdueAmount)} icon={<AlertTriangle size={24}/>} color="danger"/>
+                <SummaryStatCard label="Ø¹Ø¯Ø¯ Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ù…ØªØ£Ø®Ø±Ø©" value={summaryData.overdueCount} icon={<Hash size={24}/>} color="danger"/>
+                <SummaryStatCard label="Ù…Ø³ØªØ­Ù‚ (ØºÙŠØ± Ù…ØªØ£Ø®Ø±)" value={formatCurrency(summaryData.unpaidAmount)} icon={<DollarSign size={24}/>} color="warning"/>
+                <SummaryStatCard label="Ù…ØªÙˆØ³Ø· Ø£ÙŠØ§Ù… Ø§Ù„ØªØ£Ø®ÙŠØ±" value={summaryData.avgOverdueDays.toFixed(0)} icon={<Clock size={24}/>} color="warning"/>
             </div>
-            <Card>
-                <div className="flex flex-wrap justify-between items-center mb-4 gap-4">
-                    <h2 className="text-xl font-bold">الفواتير والمطالبات المالية</h2>
+            <Card className="p-4 sm:p-5">
+                <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                    <h2 className="text-xl font-bold">Ø§Ù„ÙÙˆØ§ØªÙŠØ± ÙˆØ§Ù„Ù…Ø·Ø§Ù„Ø¨Ø§Øª Ø§Ù„Ù…Ø§Ù„ÙŠØ©</h2>
                     <div className="flex items-center gap-2 flex-wrap">
-                        <button onClick={() => { setEditingInvoice(null); setIsModalOpen(true); }} className={ghostButtonCls}><PlusCircle size={16} /> إضافة فاتورة</button>
+                        <button onClick={() => { setEditingInvoice(null); setIsModalOpen(true); }} className={ghostButtonCls}><PlusCircle size={16} /> Ø¥Ø¶Ø§ÙØ© ÙØ§ØªÙˆØ±Ø©</button>
                         <button onClick={handleGenerateInvoices} disabled={isMonthlyLoading} className={primaryButtonCls}>
-                            {isMonthlyLoading && <RefreshCw size={16} className="animate-spin" />} {isMonthlyLoading ? 'جاري...' : 'إصدار الفواتير الآلي'}
+                            {isMonthlyLoading && <RefreshCw size={16} className="animate-spin" />} {isMonthlyLoading ? 'Ø¬Ø§Ø±ÙŠ...' : 'Ø¥ØµØ¯Ø§Ø± Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ø¢Ù„ÙŠ'}
                         </button>
                     </div>
                 </div>
-                <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder={'\u0627\u0628\u062d\u062b \u0628\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062a\u0648\u0631\u0629 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u0623\u062c\u0631 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0648\u062d\u062f\u0629...'} />
-                <div className="border-b border-border mb-4">
-                    <nav className="-mb-px flex space-x-4"><>{filters.map(f => (<button key={f.key} onClick={()=>handleFilterChange(f.key)} className={`${activeFilter === f.key ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'} whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm`}>{f.label}</button>))}</></nav>
-                </div>
+                <SearchFilterBar
+                    value={searchTerm}
+                    onSearch={setSearchTerm}
+                    placeholder={'\u0627\u0628\u062d\u062b \u0628\u0631\u0642\u0645 \u0627\u0644\u0641\u0627\u062a\u0648\u0631\u0629 \u0623\u0648 \u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u0623\u062c\u0631 \u0623\u0648 \u0631\u0642\u0645 \u0627\u0644\u0648\u062d\u062f\u0629...'}
+                    rightSlot={
+                        <select className="w-full min-w-[170px] rounded-2xl border border-slate-200/80 bg-white/90 px-3 py-2 text-sm text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200" value={activeFilter} onChange={(event) => handleFilterChange(event.target.value)}>
+                            {filters.map((filter) => (
+                                <option key={filter.key} value={filter.key}>
+                                    {filter.label}
+                                </option>
+                            ))}
+                        </select>
+                    }
+                    filterChips={activeFilterChips}
+                    onRemoveChip={(key) => {
+                        if (key === 'search') setSearchTerm('');
+                        if (key === 'status') handleFilterChange('all');
+                    }}
+                    onClearAll={activeFilterChips.length ? () => { setSearchTerm(''); handleFilterChange('all'); } : undefined}
+                />
                 <div>
                     {/* Wrap table with TableWrapper for consistent styling */}
                     <TableWrapper>
@@ -196,76 +218,76 @@ const Invoices: React.FC = () => {
                             )})}
                         </tbody>
                     </TableWrapper>
-                     {invoicesWithDetails.length === 0 && (<div className="text-center py-16"><ReceiptText size={52} className="mx-auto text-muted" /><h3 className="mt-4 text-xl font-semibold text-heading">لا توجد فواتير</h3></div>)}
+                     {invoicesWithDetails.length === 0 && (<div className="text-center py-16"><ReceiptText size={52} className="mx-auto text-muted" /><h3 className="mt-4 text-xl font-semibold text-heading">Ù„Ø§ ØªÙˆØ¬Ø¯ ÙÙˆØ§ØªÙŠØ±</h3></div>)}
                 </div>
                 <InvoiceForm isOpen={isModalOpen} onClose={() => {setEditingInvoice(null); setIsModalOpen(false);}} invoice={editingInvoice} />
             </Card>
             {selectedInvoice && invoiceWorkspace && (
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.06fr_0.94fr]">
-                    <Card className="p-6">
+                <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.06fr_0.94fr]">
+                    <Card className="p-4 sm:p-5">
                         <div className="flex flex-wrap items-center justify-between gap-3">
                             <div>
-                                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل الفاتورة</h3>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">متابعة حالة السداد وربط الفاتورة بالعقد والمستأجر والوحدة والتحصيل.</p>
+                                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ù…Ø³Ø§Ø­Ø© Ø¹Ù…Ù„ Ø§Ù„ÙØ§ØªÙˆØ±Ø©</h3>
+                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ù…ØªØ§Ø¨Ø¹Ø© Ø­Ø§Ù„Ø© Ø§Ù„Ø³Ø¯Ø§Ø¯ ÙˆØ±Ø¨Ø· Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ø¨Ø§Ù„Ø¹Ù‚Ø¯ ÙˆØ§Ù„Ù…Ø³ØªØ£Ø¬Ø± ÙˆØ§Ù„ÙˆØ­Ø¯Ø© ÙˆØ§Ù„ØªØ­ØµÙŠÙ„.</p>
                             </div>
                             <div className="flex flex-wrap gap-2">
                                 {selectedInvoice.status !== 'PAID' && (
                                     <button onClick={() => navigate(`/financials?tab=receipts&action=add&invoiceId=${selectedInvoice.id}`)} className={successButtonCls}>
                                         <DollarSign size={14}/>
-                                        تحصيل
+                                        ØªØ­ØµÙŠÙ„
                                     </button>
                                 )}
                                 <button onClick={() => setPrintingInvoice(selectedInvoice)} className={ghostButtonCls}>
                                     <ReceiptText size={14}/>
-                                    طباعة
+                                    Ø·Ø¨Ø§Ø¹Ø©
                                 </button>
                             </div>
                         </div>
 
-                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                            <SummaryStatCard label="رقم الفاتورة" value={selectedInvoice.no || '—'} icon={<Hash size={18}/>} color="slate"/>
-                            <SummaryStatCard label="المبلغ" value={formatCurrency(selectedInvoice.amount + (selectedInvoice.taxAmount || 0))} icon={<DollarSign size={18}/>} color="blue"/>
-                            <SummaryStatCard label="المتبقي" value={formatCurrency(invoiceWorkspace.balance)} icon={<AlertTriangle size={18}/>} color={invoiceWorkspace.balance > 0 ? 'rose' : 'emerald'}/>
-                            <SummaryStatCard label="الحالة" value={getInvoiceStatusLabel(selectedInvoice.status)} icon={<CheckCircle2 size={18}/>} color={selectedInvoice.status === 'PAID' ? 'emerald' : 'amber'}/>
+                        <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            <SummaryStatCard label="Ø±Ù‚Ù… Ø§Ù„ÙØ§ØªÙˆØ±Ø©" value={selectedInvoice.no || 'â€”'} icon={<Hash size={18}/>} color="slate"/>
+                            <SummaryStatCard label="Ø§Ù„Ù…Ø¨Ù„Øº" value={formatCurrency(selectedInvoice.amount + (selectedInvoice.taxAmount || 0))} icon={<DollarSign size={18}/>} color="blue"/>
+                            <SummaryStatCard label="Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ" value={formatCurrency(invoiceWorkspace.balance)} icon={<AlertTriangle size={18}/>} color={invoiceWorkspace.balance > 0 ? 'rose' : 'emerald'}/>
+                            <SummaryStatCard label="Ø§Ù„Ø­Ø§Ù„Ø©" value={getInvoiceStatusLabel(selectedInvoice.status)} icon={<CheckCircle2 size={18}/>} color={selectedInvoice.status === 'PAID' ? 'emerald' : 'amber'}/>
                         </div>
 
-                        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
                             <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الربط التشغيلي</div>
+                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø§Ù„Ø±Ø¨Ø· Ø§Ù„ØªØ´ØºÙŠÙ„ÙŠ</div>
                                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                    <div><strong>المستأجر:</strong> {selectedInvoice.tenant?.name || '—'}</div>
-                                    <div><strong>الوحدة:</strong> {selectedInvoice.unit?.name || '—'}</div>
-                                    <div><strong>العقار:</strong> {invoiceWorkspace.property?.name || '—'}</div>
-                                    <div><strong>المالك:</strong> {invoiceWorkspace.owner?.name || '—'}</div>
+                                    <div><strong>Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±:</strong> {selectedInvoice.tenant?.name || 'â€”'}</div>
+                                    <div><strong>Ø§Ù„ÙˆØ­Ø¯Ø©:</strong> {selectedInvoice.unit?.name || 'â€”'}</div>
+                                    <div><strong>Ø§Ù„Ø¹Ù‚Ø§Ø±:</strong> {invoiceWorkspace.property?.name || 'â€”'}</div>
+                                    <div><strong>Ø§Ù„Ù…Ø§Ù„Ùƒ:</strong> {invoiceWorkspace.owner?.name || 'â€”'}</div>
                                 </div>
                             </div>
                             <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الاستحقاق والتحصيل</div>
+                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø§Ù„Ø§Ø³ØªØ­Ù‚Ø§Ù‚ ÙˆØ§Ù„ØªØ­ØµÙŠÙ„</div>
                                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                    <div><strong>الاستحقاق:</strong> {formatDate(selectedInvoice.dueDate)}</div>
-                                    <div><strong>المدفوع:</strong> {formatCurrency(selectedInvoice.paidAmount)}</div>
-                                    <div><strong>السندات المرتبطة:</strong> {invoiceWorkspace.receipts.length.toLocaleString('ar')}</div>
-                                    <div><strong>نوع الفاتورة:</strong> {selectedInvoice.type}</div>
+                                    <div><strong>Ø§Ù„Ø§Ø³ØªØ­Ù‚Ø§Ù‚:</strong> {formatDate(selectedInvoice.dueDate)}</div>
+                                    <div><strong>Ø§Ù„Ù…Ø¯ÙÙˆØ¹:</strong> {formatCurrency(selectedInvoice.paidAmount)}</div>
+                                    <div><strong>Ø§Ù„Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø©:</strong> {invoiceWorkspace.receipts.length.toLocaleString('ar')}</div>
+                                    <div><strong>Ù†ÙˆØ¹ Ø§Ù„ÙØ§ØªÙˆØ±Ø©:</strong> {selectedInvoice.type}</div>
                                 </div>
                             </div>
                         </div>
                     </Card>
 
-                    <div className="space-y-6">
-                        <Card className="p-6">
-                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">تنبيهات الفاتورة</h3>
+                    <div className="space-y-4">
+                        <Card className="p-4 sm:p-5">
+                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„ÙØ§ØªÙˆØ±Ø©</h3>
                             <div className="mt-4 space-y-3">
                                 <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-                                    {invoiceWorkspace.balance > 0 && new Date(selectedInvoice.dueDate).getTime() < Date.now() ? 'الفاتورة متأخرة وتحتاج متابعة فورية.' : 'لا توجد حالة تأخير حرجة على هذه الفاتورة.'}
+                                    {invoiceWorkspace.balance > 0 && new Date(selectedInvoice.dueDate).getTime() < Date.now() ? 'Ø§Ù„ÙØ§ØªÙˆØ±Ø© Ù…ØªØ£Ø®Ø±Ø© ÙˆØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø© ÙÙˆØ±ÙŠØ©.' : 'Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ø§Ù„Ø© ØªØ£Ø®ÙŠØ± Ø­Ø±Ø¬Ø© Ø¹Ù„Ù‰ Ù‡Ø°Ù‡ Ø§Ù„ÙØ§ØªÙˆØ±Ø©.'}
                                 </div>
                                 <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
-                                    يمكن الانتقال مباشرة إلى التحصيل أو الطباعة أو السجل المالي من نفس الصفحة.
+                                    ÙŠÙ…ÙƒÙ† Ø§Ù„Ø§Ù†ØªÙ‚Ø§Ù„ Ù…Ø¨Ø§Ø´Ø±Ø© Ø¥Ù„Ù‰ Ø§Ù„ØªØ­ØµÙŠÙ„ Ø£Ùˆ Ø§Ù„Ø·Ø¨Ø§Ø¹Ø© Ø£Ùˆ Ø§Ù„Ø³Ø¬Ù„ Ø§Ù„Ù…Ø§Ù„ÙŠ Ù…Ù† Ù†ÙØ³ Ø§Ù„ØµÙØ­Ø©.
                                 </div>
                             </div>
                         </Card>
 
-                        <Card className="p-6">
-                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">المستندات والطباعة</h3>
+                        <Card className="p-4 sm:p-5">
+                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ø§Ù„Ù…Ø³ØªÙ†Ø¯Ø§Øª ÙˆØ§Ù„Ø·Ø¨Ø§Ø¹Ø©</h3>
                             <div className="mt-4">
                                 <AttachmentsManager entityType="INVOICE" entityId={selectedInvoice.id} />
                             </div>
@@ -278,7 +300,7 @@ const Invoices: React.FC = () => {
                 <PrintPreviewModal
                     isOpen={!!printingInvoice}
                     onClose={() => setPrintingInvoice(null)}
-                    title={`طباعة فاتورة #${printingInvoice.no}`}
+                    title={`Ø·Ø¨Ø§Ø¹Ø© ÙØ§ØªÙˆØ±Ø© #${printingInvoice.no}`}
                     onExportPdf={() => {
                         if (!db || !printingInvoice) return;
                         const contract = db.contracts.find(c => c.id === printingInvoice.contractId);

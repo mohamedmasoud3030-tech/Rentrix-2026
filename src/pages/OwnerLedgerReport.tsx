@@ -226,6 +226,38 @@ const OwnerLedgerReport: React.FC = () => {
     return bars.map((item) => ({ ...item, width: `${Math.max((Math.abs(item.value) / maxValue) * 100, 8)}%` }));
   }, [report]);
 
+  const ownerPdfPayload = useMemo(() => {
+    if (!report) return null;
+
+    return {
+      owner: report.owner,
+      data: {
+        outstandingBalance: report.outstandingBalance,
+        totalCollected: report.grossCollections,
+        totalExpenses: report.ownerExpensesTotal,
+        officeShare: report.officeShare,
+        ownerNet: report.afterCommission,
+        propertiesCount: report.properties.length,
+        unitsCount: report.units.length,
+        activeContractsCount: report.activeContractsCount,
+        openMaintenanceCount: report.openMaintenance.length,
+        overdueInvoicesCount: report.overdueInvoices.length,
+        utilityExpenses: report.utilityExpensesTotal,
+      },
+      entries: report.transactions.map((tx) => ({
+        date: tx.date,
+        description: tx.label,
+        debit: tx.gross < 0 ? Math.abs(tx.gross) : 0,
+        credit: tx.gross > 0 ? tx.gross : 0,
+      })),
+      settings: settings!,
+      dateRangeLabel:
+        startDate || endDate
+          ? `الفترة: ${startDate ? formatDate(startDate) : 'من البداية'} إلى ${endDate ? formatDate(endDate) : 'حتى اليوم'}`
+          : 'الفترة: جميع الحركات المسجلة',
+    };
+  }, [report, settings, startDate, endDate]);
+
   return (
     <div className="space-y-6">
       <PageHeader title="كشف حساب المالك" description="تقرير احترافي يوضح إجمالي التحصيل، عمولة المكتب، المصروفات، وصافي المستحق قبل وبعد خصم العمولة." />
@@ -270,8 +302,8 @@ const OwnerLedgerReport: React.FC = () => {
           <div className="flex items-end gap-2">
             <button
               type="button"
-              onClick={() => report && exportOwnerLedgerToPdf(report.transactions, { gross: report.beforeCommission, officeShare: report.officeShare, net: report.afterCommission }, settings!, report.owner.name, report.commissionTypeLabel, false)}
-              disabled={!report}
+              onClick={() => ownerPdfPayload && exportOwnerLedgerToPdf(ownerPdfPayload)}
+              disabled={!ownerPdfPayload}
               className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
             >
               <Download size={16} /> تصدير PDF

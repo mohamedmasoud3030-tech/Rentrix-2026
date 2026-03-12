@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { User, Lock, ShieldCheck, ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 
@@ -10,17 +10,19 @@ const Login: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleLogin = async (event: React.FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
     setError('');
+
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { data, error: loginError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) {
-        setError(error.message);
+
+      if (loginError) {
+        setError(loginError.message);
       } else if (data.session) {
         navigate('/');
       }
@@ -34,24 +36,26 @@ const Login: React.FC = () => {
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-4 py-10" dir="rtl">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.10),_transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.08),_transparent_20%)]" />
-      <div className="relative grid w-full max-w-5xl overflow-hidden rounded-[34px] border border-slate-200/80 bg-white/88 shadow-[0_36px_80px_-34px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/88 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="hidden border-l border-slate-200/80 bg-[linear-gradient(135deg,#e7f0fb_0%,#f7fafc_45%,#ffffff_100%)] p-10 dark:border-slate-800 dark:bg-[linear-gradient(135deg,#193148_0%,#20384f_48%,#223d57_100%)] lg:block">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_rgba(14,165,233,0.12),_transparent_24%),radial-gradient(circle_at_bottom_left,_rgba(245,158,11,0.08),_transparent_22%)]" />
+
+      <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[36px] border border-slate-200/80 bg-white/90 shadow-[0_40px_90px_-35px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/88 lg:grid-cols-[1.05fr_0.95fr]">
+        <div className="hidden border-l border-slate-200/80 bg-[linear-gradient(135deg,#eaf4ff_0%,#f8fbff_46%,#ffffff_100%)] p-10 dark:border-slate-800 dark:bg-[linear-gradient(135deg,#162334_0%,#1b2b3d_46%,#1e3146_100%)] lg:block">
           <div className="inline-flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500 text-white shadow-brand">
             <ShieldCheck size={24} />
           </div>
-          <h1 className="mt-8 text-3xl font-black tracking-tight text-slate-900 dark:text-white">رينتريكس ERP</h1>
+
+          <h1 className="mt-8 text-3xl font-black tracking-tight text-slate-900 dark:text-white">مرحبًا بك في Rentrix ERP</h1>
           <p className="mt-3 max-w-md text-sm leading-8 text-slate-600 dark:text-slate-300">
-            منصة تشغيل عقاري ومحاسبي موحدة لإدارة العقارات والوحدات والعقود والتحصيلات والصيانة ضمن تجربة عمل مؤسسية واضحة.
+            منصة تشغيل عقاري ومحاسبي موحدة لإدارة العقارات والوحدات والعقود والتحصيلات والصيانة ضمن واجهة عمل مؤسسية حديثة.
           </p>
 
-          <div className="mt-10 space-y-4">
+          <div className="mt-10 grid gap-4">
             {[
               'إدارة العقارات والوحدات من مساحة عمل موحدة',
-              'تحصيل وفوترة ومتابعة المتأخرات ضمن تدفق واحد',
-              'تقارير وتشغيل يومي بصياغة مؤسسية واضحة',
+              'متابعة العقود والتحصيلات والمتأخرات في تدفق واحد',
+              'تقارير تشغيلية ومالية قابلة للطباعة والتصدير',
             ].map((item) => (
-              <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/75 px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
                 <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
                 <span>{item}</span>
               </div>
@@ -65,12 +69,16 @@ const Login: React.FC = () => {
               <ShieldCheck className="h-8 w-8" />
             </div>
             <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900 dark:text-white">تسجيل الدخول للنظام</h2>
-            <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">أدخل بياناتك للوصول إلى لوحة التحكم وإدارة العمليات اليومية.</p>
+            <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">
+              أدخل بياناتك للوصول إلى لوحة التحكم وإدارة العمليات اليومية.
+            </p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <label htmlFor="email-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">البريد الإلكتروني</label>
+              <label htmlFor="email-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">
+                البريد الإلكتروني
+              </label>
               <div className="relative">
                 <User className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
@@ -88,7 +96,9 @@ const Login: React.FC = () => {
             </div>
 
             <div className="space-y-2">
-              <label htmlFor="password-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">كلمة المرور</label>
+              <label htmlFor="password-field" className="block text-xs font-extrabold tracking-wide text-slate-600 dark:text-slate-300">
+                كلمة المرور
+              </label>
               <div className="relative">
                 <Lock className="absolute right-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
@@ -118,7 +128,7 @@ const Login: React.FC = () => {
             >
               {isLoading ? (
                 <>
-                  <div className="h-5 w-5 rounded-full border-2 border-white/30 border-t-white animate-spin dark:border-slate-300/40 dark:border-t-slate-900" />
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white dark:border-slate-300/40 dark:border-t-slate-900" />
                   جاري التحقق...
                 </>
               ) : (
@@ -131,7 +141,7 @@ const Login: React.FC = () => {
           </form>
 
           <div className="mt-8 border-t border-slate-200/80 pt-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <p>جميع العمليات محفوظة ومؤمنة داخل نظام رينتريكس</p>
+            <p>جميع العمليات محفوظة ومؤمنة داخل نظام Rentrix</p>
           </div>
         </div>
       </div>
