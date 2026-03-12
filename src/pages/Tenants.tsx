@@ -28,10 +28,10 @@ const dangerButton =
   'inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all duration-150 hover:bg-rose-600 hover:shadow-md';
 
 const statusLabelMap: Record<string, string> = {
-  ACTIVE: 'Ã™â€ Ã˜Â´Ã˜Â·',
-  INACTIVE: 'Ã˜ÂºÃ™Å Ã˜Â± Ã™â€ Ã˜Â´Ã˜Â·',
-  BLACKLISTED: 'Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â³Ã™Ë†Ã˜Â¯Ã˜Â§Ã˜Â¡',
-  BLACKLIST: 'Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â³Ã™Ë†Ã˜Â¯Ã˜Â§Ã˜Â¡',
+  ACTIVE: 'نشط',
+  INACTIVE: 'غير نشط',
+  BLACKLISTED: 'قائمة سوداء',
+  BLACKLIST: 'قائمة سوداء',
 };
 
 const normalizeTenants = (rows: any[]): Tenant[] =>
@@ -76,7 +76,7 @@ const Tenants: React.FC = () => {
       setTenants(rows);
       setSelectedTenantId((current) => current || rows[0]?.id || '');
     } catch (error: any) {
-      toast.error(error.message || 'Ã˜Â­Ã˜Â¯Ã˜Â« Ã˜Â®Ã˜Â·Ã˜Â£ Ã˜Â£Ã˜Â«Ã™â€ Ã˜Â§Ã˜Â¡ Ã˜Â¬Ã™â€žÃ˜Â¨ Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ ');
+      toast.error(error.message || 'حدث خطأ أثناء جلب بيانات المستأجرين');
     } finally {
       setLoading(false);
     }
@@ -125,7 +125,7 @@ const Tenants: React.FC = () => {
     const utilityExpenses = db.expenses.filter(
       (expense) =>
         (contractIds.has(expense.contractId || '') || units.some((unit) => unit?.id === expense.unitId)) &&
-        ['Ã™Æ’Ã™â€¡Ã˜Â±Ã˜Â¨Ã˜Â§Ã˜Â¡', 'Ã™â€¦Ã™Å Ã˜Â§Ã™â€¡', 'Ã˜Â¥Ã™â€ Ã˜ÂªÃ˜Â±Ã™â€ Ã˜Âª', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())),
+        ['كهرباء', 'مياه', 'إنترنت', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())),
     );
 
     return {
@@ -179,18 +179,18 @@ const Tenants: React.FC = () => {
         delete (updatePayload as any).created_at;
         const { error } = await supabase.from('tenants').update(updatePayload).eq('id', editingTenant.id);
         if (error) throw error;
-        toast.success('Ã˜ÂªÃ™â€¦ Ã˜ÂªÃ˜Â­Ã˜Â¯Ã™Å Ã˜Â« Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­');
+        toast.success('تم تحديث بيانات المستأجر بنجاح');
       } else {
         const { error } = await supabase.from('tenants').insert([payload]);
         if (error) throw error;
-        toast.success('Ã˜ÂªÃ™â€¦Ã˜Âª Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­');
+        toast.success('تمت إضافة المستأجر بنجاح');
       }
 
       setIsModalOpen(false);
       await refreshData();
       await fetchTenants();
     } catch (error: any) {
-      toast.error(error.message || 'Ã˜Â­Ã˜Â¯Ã˜Â« Ã˜Â®Ã˜Â·Ã˜Â£ Ã˜Â£Ã˜Â«Ã™â€ Ã˜Â§Ã˜Â¡ Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª');
+      toast.error(error.message || 'حدث خطأ أثناء حفظ البيانات');
     }
   };
 
@@ -199,54 +199,54 @@ const Tenants: React.FC = () => {
     try {
       const { error } = await supabase.from('tenants').delete().eq('id', tenantToDelete.id);
       if (error) throw error;
-      toast.success('Ã˜ÂªÃ™â€¦ Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã˜Â¨Ã™â€ Ã˜Â¬Ã˜Â§Ã˜Â­');
+      toast.success('تم حذف المستأجر بنجاح');
       setTenantToDelete(null);
       await refreshData();
       await fetchTenants();
     } catch (error: any) {
-      toast.error(error.message || 'Ã˜Â­Ã˜Â¯Ã˜Â« Ã˜Â®Ã˜Â·Ã˜Â£ Ã˜Â£Ã˜Â«Ã™â€ Ã˜Â§Ã˜Â¡ Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â°Ã™Â');
+      toast.error(error.message || 'حدث خطأ أثناء الحذف');
     }
   };
 
   return (
-    <div className="app-page page-enter" dir="rtl">
-      <PageHeader title="Ã˜Â¥Ã˜Â¯Ã˜Â§Ã˜Â±Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ " description="Ã™â€¦Ã™â€žÃ™ÂÃ˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ Ã˜Å’ Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ™Ë†Ã˜Â§Ã˜ÂµÃ™â€žÃ˜Å’ Ã˜Â­Ã˜Â§Ã™â€žÃ˜Â© Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â³Ã˜Â§Ã˜Â¨Ã˜Å’ Ã™Ë†Ã™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã˜Â© Ã˜Â¬Ã˜Â§Ã™â€¡Ã˜Â²Ã™Å Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â±Ã˜Â¨Ã˜Â· Ã™â€¦Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯ Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã˜ÂµÃ™Å Ã™â€ž.">
+    <div className="space-y-6" dir="rtl">
+      <PageHeader title="إدارة المستأجرين" description="ملفات المستأجرين، بيانات التواصل، حالة الحساب، ومراجعة جاهزية الربط مع العقود والتحصيل.">
         <button onClick={() => handleOpenModal()} className={primaryButton}>
           <Plus size={18} />
-          Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±
+          إضافة مستأجر
         </button>
       </PageHeader>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryStatCard icon={<Users size={18} />} color="blue" title="Ã˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å  Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ " value={stats.total.toLocaleString('ar')} />
-        <SummaryStatCard icon={<ShieldCheck size={18} />} color="emerald" title="Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Ë†Ã™â€  Ã™â€ Ã˜Â´Ã˜Â·Ã™Ë†Ã™â€ " value={stats.active.toLocaleString('ar')} />
-        <SummaryStatCard icon={<Trash2 size={18} />} color="rose" title="Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â³Ã™Ë†Ã˜Â¯Ã˜Â§Ã˜Â¡" value={stats.blacklisted.toLocaleString('ar')} />
-        <SummaryStatCard icon={<Mail size={18} />} color="amber" title="Ã™â€¦Ã™â€žÃ™ÂÃ˜Â§Ã˜Âª Ã˜Â¨Ã™â€¡Ã˜Â§ Ã˜Â¨Ã˜Â±Ã™Å Ã˜Â¯" value={stats.withEmail.toLocaleString('ar')} />
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <SummaryStatCard icon={<Users size={18} />} color="blue" title="إجمالي المستأجرين" value={stats.total.toLocaleString('ar')} />
+        <SummaryStatCard icon={<ShieldCheck size={18} />} color="emerald" title="مستأجرون نشطون" value={stats.active.toLocaleString('ar')} />
+        <SummaryStatCard icon={<Trash2 size={18} />} color="rose" title="قائمة سوداء" value={stats.blacklisted.toLocaleString('ar')} />
+        <SummaryStatCard icon={<Mail size={18} />} color="amber" title="ملفات بها بريد" value={stats.withEmail.toLocaleString('ar')} />
       </div>
 
-      <Card className="p-4 sm:p-5">
+      <Card className="p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">Ã™â€šÃ˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ </h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ã™Ë†Ã˜Â§Ã˜Â¬Ã™â€¡Ã˜Â© Ã˜Â£Ã™Ë†Ã˜Â¶Ã˜Â­ Ã™â€žÃ™â€žÃ˜Â¨Ã˜Â­Ã˜Â«Ã˜Å’ Ã™â€¦Ã˜Â±Ã˜Â§Ã˜Â¬Ã˜Â¹Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â©Ã˜Å’ Ã™Ë†Ã˜Â§Ã™â€žÃ™Ë†Ã˜ÂµÃ™Ë†Ã™â€ž Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â±Ã™Å Ã˜Â¹ Ã˜Â¥Ã™â€žÃ™â€° Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜ÂªÃ™Ë†Ã˜Â§Ã˜ÂµÃ™â€ž Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¡Ã™Ë†Ã™Å Ã˜Â©.</p>
+            <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">قاعدة المستأجرين</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">واجهة أوضح للبحث، مراجعة الحالة، والوصول السريع إلى بيانات التواصل والهوية.</p>
           </div>
         </div>
 
-        <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="Ã˜Â¨Ã˜Â­Ã˜Â« Ã˜Â¨Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã™â€¦ Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â§Ã˜ÂªÃ™Â Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ™â€¡Ã™Ë†Ã™Å Ã˜Â© Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â¯ Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ™â€¦Ã™â€žÃ˜Â§Ã˜Â­Ã˜Â¸Ã˜Â§Ã˜Âª..." />
+        <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث بالاسم أو الهاتف أو الهوية أو البريد أو الملاحظات..." />
 
         {loading ? (
-          <LoadingSpinner label="Ã˜Â¬Ã˜Â§Ã˜Â±Ã™Å  Ã˜ÂªÃ˜Â­Ã™â€¦Ã™Å Ã™â€ž Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™Å Ã™â€ ..." />
+          <LoadingSpinner label="جاري تحميل بيانات المستأجرين..." />
         ) : filteredTenants.length === 0 ? (
-          <EmptyState icon={Users} title="Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã™â€ Ã˜ÂªÃ˜Â§Ã˜Â¦Ã˜Â¬ Ã™â€¦Ã˜Â·Ã˜Â§Ã˜Â¨Ã™â€šÃ˜Â©" description="Ã˜Â¬Ã˜Â±Ã™â€˜Ã˜Â¨ Ã˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€ž Ã™Æ’Ã™â€žÃ™â€¦Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â­Ã˜Â« Ã˜Â£Ã™Ë† Ã˜Â£Ã˜Â¶Ã™Â Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±Ã™â€¹Ã˜Â§ Ã˜Â¬Ã˜Â¯Ã™Å Ã˜Â¯Ã™â€¹Ã˜Â§ Ã˜Â¥Ã™â€žÃ™â€° Ã˜Â§Ã™â€žÃ™â€ Ã˜Â¸Ã˜Â§Ã™â€¦." />
+          <EmptyState icon={Users} title="لا توجد نتائج مطابقة" description="جرّب تعديل كلمات البحث أو أضف مستأجرًا جديدًا إلى النظام." />
         ) : (
           <TableWrapper>
             <thead>
               <tr>
-                <Th className="w-1/3">Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±</Th>
-                <Th className="w-1/4">Ã˜Â§Ã™â€žÃ˜ÂªÃ™Ë†Ã˜Â§Ã˜ÂµÃ™â€ž</Th>
-                <Th className="w-1/6">Ã˜Â§Ã™â€žÃ™â€¡Ã™Ë†Ã™Å Ã˜Â©</Th>
-                <Th className="w-1/6">Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â©</Th>
-                <Th className="w-1/6 text-center">Ã˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡Ã˜Â§Ã˜Âª</Th>
+                <Th className="w-1/3">المستأجر</Th>
+                <Th className="w-1/4">التواصل</Th>
+                <Th className="w-1/6">الهوية</Th>
+                <Th className="w-1/6">الحالة</Th>
+                <Th className="w-1/6 text-center">إجراءات</Th>
               </tr>
             </thead>
             <tbody>
@@ -267,31 +267,31 @@ const Tenants: React.FC = () => {
                     <div className="space-y-1 text-sm text-slate-600 dark:text-slate-300">
                       <div className="flex items-center gap-2">
                         <Phone size={14} />
-                        {tenant.phone || 'Ã™â€žÃ˜Â§ Ã™Å Ã™Ë†Ã˜Â¬Ã˜Â¯ Ã™â€¡Ã˜Â§Ã˜ÂªÃ™Â'}
+                        {tenant.phone || 'لا يوجد هاتف'}
                       </div>
                       <div className="flex items-center gap-2">
                         <Mail size={14} />
-                        {tenant.email || 'Ã™â€žÃ˜Â§ Ã™Å Ã™Ë†Ã˜Â¬Ã˜Â¯ Ã˜Â¨Ã˜Â±Ã™Å Ã˜Â¯'}
+                        {tenant.email || 'لا يوجد بريد'}
                       </div>
                     </div>
                   </Td>
-                  <Td className="font-mono text-sm text-slate-600 dark:text-slate-300">{tenant.national_id || tenant.nationalId || 'Ã˜ÂºÃ™Å Ã˜Â± Ã™â€¦Ã˜Â³Ã˜Â¬Ã™â€žÃ˜Â©'}</Td>
+                  <Td className="font-mono text-sm text-slate-600 dark:text-slate-300">{tenant.national_id || tenant.nationalId || 'غير مسجلة'}</Td>
                   <Td>
-                    <StatusPill status={tenant.status || 'ACTIVE'}>{statusLabelMap[tenant.status || 'ACTIVE'] || tenant.status || 'Ã™â€ Ã˜Â´Ã˜Â·'}</StatusPill>
+                    <StatusPill status={tenant.status || 'ACTIVE'}>{statusLabelMap[tenant.status || 'ACTIVE'] || tenant.status || 'نشط'}</StatusPill>
                   </Td>
                   <Td>
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => handleOpenModal(tenant)}
                         className="inline-flex items-center justify-center rounded-2xl border border-sky-100 bg-sky-50 px-3 py-2 text-sm text-sky-700 transition-all duration-150 hover:bg-sky-100 dark:border-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:hover:bg-sky-500/20"
-                        title="Ã˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€ž"
+                        title="تعديل"
                       >
                         <Edit size={14} />
                       </button>
                       <button
                         onClick={() => setTenantToDelete(tenant)}
                         className="inline-flex items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 px-3 py-2 text-sm text-rose-700 transition-all duration-150 hover:bg-rose-100 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
-                        title="Ã˜Â­Ã˜Â°Ã™Â"
+                        title="حذف"
                       >
                         <Trash2 size={14} />
                       </button>
@@ -305,59 +305,59 @@ const Tenants: React.FC = () => {
       </Card>
 
       {selectedTenant && tenantWorkspace && (
-        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <Card className="p-4 sm:p-5">
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
+          <Card className="p-6">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ã™â€¦Ã˜Â³Ã˜Â§Ã˜Â­Ã˜Â© Ã˜Â¹Ã™â€¦Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ã˜Â¹Ã˜Â±Ã˜Â¶ Ã™â€¦Ã™Ë†Ã˜Â­Ã˜Â¯ Ã™â€žÃ™â€žÃ˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯ Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã˜ÂµÃ™Å Ã™â€ž Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€ Ã˜Â¨Ã™Å Ã™â€¡Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ˜ÂµÃ™Å Ã˜Â§Ã™â€ Ã˜Â© Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ™â€ Ã˜Â¯Ã˜Â§Ã˜Âª Ã˜Â¯Ã˜Â§Ã˜Â®Ã™â€ž Ã˜Â³Ã˜Â¬Ã™â€ž Ã™Ë†Ã˜Â§Ã˜Â­Ã˜Â¯.</p>
+                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل المستأجر</h3>
+                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">عرض موحد للعقود والتحصيل والتنبيهات والصيانة والمستندات داخل سجل واحد.</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => navigate('/financials')} className={ghostButton}>
                   <Receipt size={15} />
-                  Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â­Ã˜ÂµÃ™Å Ã™â€ž
+                  التحصيل
                 </button>
                 <button type="button" onClick={() => navigate('/contracts')} className={ghostButton}>
                   <FileText size={15} />
-                  Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯
+                  العقود
                 </button>
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <SummaryStatCard icon={<FileText size={18} />} color="blue" title="Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯" value={tenantWorkspace.contracts.length.toLocaleString('ar')} />
-              <SummaryStatCard icon={<Receipt size={18} />} color="emerald" title="Ã˜Â§Ã™â€žÃ˜Â¯Ã™ÂÃ˜Â¹Ã˜Â§Ã˜Âª" value={tenantWorkspace.receipts.length.toLocaleString('ar')} />
-              <SummaryStatCard icon={<AlertTriangle size={18} />} color="amber" title="Ã™ÂÃ™Ë†Ã˜Â§Ã˜ÂªÃ™Å Ã˜Â± Ã™â€¦Ã˜ÂªÃ˜Â£Ã˜Â®Ã˜Â±Ã˜Â©" value={tenantWorkspace.overdueInvoices.length.toLocaleString('ar')} />
-              <SummaryStatCard icon={<Wallet size={18} />} color="rose" title="Ã˜Â§Ã™â€žÃ˜Â±Ã˜ÂµÃ™Å Ã˜Â¯" value={formatCurrency(tenantWorkspace.balance, db.settings?.currency || 'OMR')} />
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              <SummaryStatCard icon={<FileText size={18} />} color="blue" title="العقود" value={tenantWorkspace.contracts.length.toLocaleString('ar')} />
+              <SummaryStatCard icon={<Receipt size={18} />} color="emerald" title="الدفعات" value={tenantWorkspace.receipts.length.toLocaleString('ar')} />
+              <SummaryStatCard icon={<AlertTriangle size={18} />} color="amber" title="فواتير متأخرة" value={tenantWorkspace.overdueInvoices.length.toLocaleString('ar')} />
+              <SummaryStatCard icon={<Wallet size={18} />} color="rose" title="الرصيد" value={formatCurrency(tenantWorkspace.balance, db.settings?.currency || 'OMR')} />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ã˜Â§Ã™â€žÃ™â€¦Ã™â€žÃ™Â Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¹Ã˜Â±Ã™Å Ã™ÂÃ™Å </div>
+                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الملف التعريفي</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                  <div><strong>Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã™â€¦:</strong> {selectedTenant.name}</div>
-                  <div><strong>Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â§Ã˜ÂªÃ™Â:</strong> {selectedTenant.phone || 'Ã¢â‚¬â€'}</div>
-                  <div><strong>Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â¯:</strong> {selectedTenant.email || 'Ã¢â‚¬â€'}</div>
-                  <div><strong>Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â©:</strong> {statusLabelMap[selectedTenant.status || 'ACTIVE'] || 'Ã™â€ Ã˜Â´Ã˜Â·'}</div>
+                  <div><strong>الاسم:</strong> {selectedTenant.name}</div>
+                  <div><strong>الهاتف:</strong> {selectedTenant.phone || '—'}</div>
+                  <div><strong>البريد:</strong> {selectedTenant.email || '—'}</div>
+                  <div><strong>الحالة:</strong> {statusLabelMap[selectedTenant.status || 'ACTIVE'] || 'نشط'}</div>
                 </div>
               </div>
               <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¬Ã™â€žÃ˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¨Ã˜Â·Ã˜Â©</div>
+                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">السجلات المرتبطة</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                  <div><strong>Ã˜Â§Ã™â€žÃ™Ë†Ã˜Â­Ã˜Â¯Ã˜Â§Ã˜Âª:</strong> {tenantWorkspace.units.length.toLocaleString('ar')}</div>
-                  <div><strong>Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€šÃ˜Â§Ã˜Â±Ã˜Â§Ã˜Âª:</strong> {tenantWorkspace.properties.length.toLocaleString('ar')}</div>
-                  <div><strong>Ã˜Â§Ã™â€žÃ˜ÂµÃ™Å Ã˜Â§Ã™â€ Ã˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã™ÂÃ˜ÂªÃ™Ë†Ã˜Â­Ã˜Â©:</strong> {tenantWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</div>
-                  <div><strong>Ã˜Â¥Ã˜Â¬Ã™â€¦Ã˜Â§Ã™â€žÃ™Å  Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â­Ã˜ÂµÃ™â€ž:</strong> {formatCurrency(tenantWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0), db.settings?.currency || 'OMR')}</div>
+                  <div><strong>الوحدات:</strong> {tenantWorkspace.units.length.toLocaleString('ar')}</div>
+                  <div><strong>العقارات:</strong> {tenantWorkspace.properties.length.toLocaleString('ar')}</div>
+                  <div><strong>الصيانة المفتوحة:</strong> {tenantWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</div>
+                  <div><strong>إجمالي المحصل:</strong> {formatCurrency(tenantWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0), db.settings?.currency || 'OMR')}</div>
                 </div>
               </div>
             </div>
 
             <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
               <div className="grid grid-cols-[1fr_0.9fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
-                <div>Ã˜Â§Ã™â€žÃ˜Â¹Ã™â€šÃ˜Â¯ / Ã˜Â§Ã™â€žÃ™Ë†Ã˜Â­Ã˜Â¯Ã˜Â©</div>
-                <div>Ã˜Â§Ã™â€žÃ™ÂÃ˜ÂªÃ˜Â±Ã˜Â©</div>
-                <div>Ã˜Â§Ã™â€žÃ˜Â±Ã˜ÂµÃ™Å Ã˜Â¯</div>
-                <div>Ã˜Â§Ã™â€žÃ˜Â¥Ã˜Â¬Ã˜Â±Ã˜Â§Ã˜Â¡</div>
+                <div>العقد / الوحدة</div>
+                <div>الفترة</div>
+                <div>الرصيد</div>
+                <div>الإجراء</div>
               </div>
               <div className="divide-y divide-slate-200 dark:divide-slate-800">
                 {tenantWorkspace.contracts.map((contract) => {
@@ -367,8 +367,8 @@ const Tenants: React.FC = () => {
                   return (
                     <div key={contract.id} className="grid grid-cols-[1fr_0.9fr_0.8fr_0.8fr] gap-4 px-4 py-3 text-sm">
                       <div>
-                        <div className="font-semibold text-slate-800 dark:text-slate-100">{unit?.name || unit?.unitNumber || 'Ã™Ë†Ã˜Â­Ã˜Â¯Ã˜Â©'}</div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">{property?.name || 'Ã˜Â¹Ã™â€šÃ˜Â§Ã˜Â± Ã˜ÂºÃ™Å Ã˜Â± Ã™â€¦Ã˜Â­Ã˜Â¯Ã˜Â¯'}</div>
+                        <div className="font-semibold text-slate-800 dark:text-slate-100">{unit?.name || unit?.unitNumber || 'وحدة'}</div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">{property?.name || 'عقار غير محدد'}</div>
                       </div>
                       <div className="text-slate-600 dark:text-slate-300">{formatDate(contract.start)} - {formatDate(contract.end)}</div>
                       <div className={balance > 0 ? 'font-bold text-rose-600 dark:text-rose-300' : 'font-bold text-emerald-600 dark:text-emerald-300'}>
@@ -376,7 +376,7 @@ const Tenants: React.FC = () => {
                       </div>
                       <div>
                         <button type="button" onClick={() => navigate(`/contracts?contractId=${contract.id}`)} className="font-bold text-sky-600 dark:text-sky-300">
-                          Ã™ÂÃ˜ÂªÃ˜Â­ Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¬Ã™â€ž
+                          فتح السجل
                         </button>
                       </div>
                     </div>
@@ -386,34 +386,34 @@ const Tenants: React.FC = () => {
             </div>
           </Card>
 
-          <div className="space-y-4">
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ã˜Â§Ã™â€žÃ˜ÂªÃ™â€ Ã˜Â¨Ã™Å Ã™â€¡Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â§Ã˜Â¨Ã˜Â¹Ã˜Â§Ã˜Âª</h3>
+          <div className="space-y-6">
+            <Card className="p-6">
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">التنبيهات والمتابعات</h3>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-                  Ã™ÂÃ™Ë†Ã˜Â§Ã˜ÂªÃ™Å Ã˜Â± Ã™â€¦Ã˜ÂªÃ˜Â£Ã˜Â®Ã˜Â±Ã˜Â©: {tenantWorkspace.overdueInvoices.length.toLocaleString('ar')}
+                  فواتير متأخرة: {tenantWorkspace.overdueInvoices.length.toLocaleString('ar')}
                 </div>
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-                  Ã˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯ Ã˜ÂªÃ™â€ Ã˜ÂªÃ™â€¡Ã™Å  Ã˜Â®Ã™â€žÃ˜Â§Ã™â€ž 30 Ã™Å Ã™Ë†Ã™â€¦Ã™â€¹Ã˜Â§: {tenantWorkspace.contracts.filter((contract) => contract.status === 'ACTIVE' && new Date(contract.end).getTime() - Date.now() <= 30 * 24 * 60 * 60 * 1000 && new Date(contract.end).getTime() >= Date.now()).length.toLocaleString('ar')}
+                  عقود تنتهي خلال 30 يومًا: {tenantWorkspace.contracts.filter((contract) => contract.status === 'ACTIVE' && new Date(contract.end).getTime() - Date.now() <= 30 * 24 * 60 * 60 * 1000 && new Date(contract.end).getTime() >= Date.now()).length.toLocaleString('ar')}
                 </div>
                 <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
-                  Ã˜ÂµÃ™Å Ã˜Â§Ã™â€ Ã˜Â© Ã™â€¦Ã™ÂÃ˜ÂªÃ™Ë†Ã˜Â­Ã˜Â©: {tenantWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}
+                  صيانة مفتوحة: {tenantWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}
                 </div>
               </div>
             </Card>
 
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â¯Ã™â€¦Ã˜Â§Ã˜Âª Ã™Ë†Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ™â€ Ã˜Â¯Ã˜Â§Ã˜Âª</h3>
+            <Card className="p-6">
+              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">الخدمات والمستندات</h3>
               <div className="mt-4 space-y-4">
                 <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
-                  <div className="font-bold text-slate-700 dark:text-slate-200">Ã˜ÂªÃ˜ÂªÃ˜Â¨Ã˜Â¹ Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â¯Ã™â€¦Ã˜Â§Ã˜Âª</div>
+                  <div className="font-bold text-slate-700 dark:text-slate-200">تتبع الخدمات</div>
                   <div className="mt-3 grid grid-cols-1 gap-2">
                     <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
-                      <span>Ã™â€¦Ã˜ÂµÃ˜Â±Ã™Ë†Ã™ÂÃ˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ˜Â®Ã˜Â¯Ã™â€¦Ã˜Â§Ã˜Âª</span>
+                      <span>مصروفات الخدمات</span>
                       <strong>{formatCurrency(tenantWorkspace.utilityExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), db.settings?.currency || 'OMR')}</strong>
                     </div>
                     <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
-                      <span>Ã˜Â§Ã™â€žÃ™ÂÃ™Ë†Ã˜Â§Ã˜ÂªÃ™Å Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â£Ã˜Â®Ã˜Â±Ã˜Â©</span>
+                      <span>الفواتير المتأخرة</span>
                       <strong>{tenantWorkspace.overdueInvoices.length.toLocaleString('ar')}</strong>
                     </div>
                   </div>
@@ -421,22 +421,22 @@ const Tenants: React.FC = () => {
                 <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                   <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
                     <Wrench size={15} />
-                    Ã˜Â¢Ã˜Â®Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â§Ã˜Â¨Ã˜Â¹Ã˜Â§Ã˜Âª
+                    آخر المتابعات
                   </div>
                   <div className="space-y-2">
                     {tenantWorkspace.maintenance.slice(0, 4).map((record) => (
                       <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
-                        <span>{record.issueTitle || record.description || 'Ã˜Â·Ã™â€žÃ˜Â¨ Ã˜ÂµÃ™Å Ã˜Â§Ã™â€ Ã˜Â©'}</span>
+                        <span>{record.issueTitle || record.description || 'طلب صيانة'}</span>
                         <span className="font-bold text-amber-600 dark:text-amber-300">{record.status}</span>
                       </div>
                     ))}
-                    {!tenantWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">Ã™â€žÃ˜Â§ Ã˜ÂªÃ™Ë†Ã˜Â¬Ã˜Â¯ Ã™â€¦Ã˜ÂªÃ˜Â§Ã˜Â¨Ã˜Â¹Ã˜Â§Ã˜Âª Ã˜ÂªÃ˜Â´Ã˜ÂºÃ™Å Ã™â€žÃ™Å Ã˜Â© Ã™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¨Ã˜Â·Ã˜Â© Ã˜Â¨Ã™â€¡Ã˜Â°Ã˜Â§ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±.</div>}
+                    {!tenantWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد متابعات تشغيلية مرتبطة بهذا المستأجر.</div>}
                   </div>
                 </div>
                 <AttachmentsManager entityType="TENANT" entityId={selectedTenant.id} />
                 <button type="button" onClick={() => navigate('/reports?tab=tenants')} className={`${ghostButton} w-full`}>
                   <Printer size={15} />
-                  Ã˜Â·Ã˜Â¨Ã˜Â§Ã˜Â¹Ã˜Â© Ã˜ÂªÃ™â€šÃ˜Â±Ã™Å Ã˜Â± Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±
+                  طباعة تقرير المستأجر
                 </button>
               </div>
             </Card>
@@ -444,76 +444,76 @@ const Tenants: React.FC = () => {
         </div>
       )}
 
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTenant ? 'Ã˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€ž Ã˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±' : 'Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã˜Â¬Ã˜Â¯Ã™Å Ã˜Â¯'} size="lg">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={editingTenant ? 'تعديل بيانات المستأجر' : 'إضافة مستأجر جديد'} size="lg">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
             <div>
               <label className={labelCls}>
-                Ã˜Â§Ã˜Â³Ã™â€¦ Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± <span className="text-rose-500">*</span>
+                اسم المستأجر <span className="text-rose-500">*</span>
               </label>
-              <input className={inputCls} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="Ã˜Â§Ã™â€žÃ˜Â§Ã˜Â³Ã™â€¦ Ã˜Â§Ã™â€žÃ™Æ’Ã˜Â§Ã™â€¦Ã™â€ž" required />
+              <input className={inputCls} value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="الاسم الكامل" required />
             </div>
             <div>
-              <label className={labelCls}>Ã˜Â±Ã™â€šÃ™â€¦ Ã˜Â§Ã™â€žÃ™â€¡Ã˜Â§Ã˜ÂªÃ™Â</label>
+              <label className={labelCls}>رقم الهاتف</label>
               <input className={inputCls} value={formData.phone} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} placeholder="+968 9999 9999" />
             </div>
             <div>
-              <label className={labelCls}>Ã˜Â§Ã™â€žÃ˜Â¨Ã˜Â±Ã™Å Ã˜Â¯ Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€žÃ™Æ’Ã˜ÂªÃ˜Â±Ã™Ë†Ã™â€ Ã™Å </label>
+              <label className={labelCls}>البريد الإلكتروني</label>
               <input className={inputCls} type="email" value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="tenant@example.com" />
             </div>
             <div>
-              <label className={labelCls}>Ã˜Â±Ã™â€šÃ™â€¦ Ã˜Â§Ã™â€žÃ™â€¡Ã™Ë†Ã™Å Ã˜Â©</label>
-              <input className={inputCls} value={formData.national_id} onChange={(e) => setFormData({ ...formData, national_id: e.target.value })} placeholder="Ã˜Â§Ã™â€žÃ™â€¡Ã™Ë†Ã™Å Ã˜Â© Ã˜Â£Ã™Ë† Ã˜Â§Ã™â€žÃ˜Â¥Ã™â€šÃ˜Â§Ã™â€¦Ã˜Â©" />
+              <label className={labelCls}>رقم الهوية</label>
+              <input className={inputCls} value={formData.national_id} onChange={(e) => setFormData({ ...formData, national_id: e.target.value })} placeholder="الهوية أو الإقامة" />
             </div>
             <div>
-              <label className={labelCls}>Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â§Ã™â€žÃ˜Â©</label>
+              <label className={labelCls}>الحالة</label>
               <select className={inputCls} value={formData.status} onChange={(e) => setFormData({ ...formData, status: e.target.value as 'ACTIVE' | 'INACTIVE' | 'BLACKLISTED' })}>
-                <option value="ACTIVE">Ã™â€ Ã˜Â´Ã˜Â·</option>
-                <option value="INACTIVE">Ã˜ÂºÃ™Å Ã˜Â± Ã™â€ Ã˜Â´Ã˜Â·</option>
-                <option value="BLACKLISTED">Ã™â€šÃ˜Â§Ã˜Â¦Ã™â€¦Ã˜Â© Ã˜Â³Ã™Ë†Ã˜Â¯Ã˜Â§Ã˜Â¡</option>
+                <option value="ACTIVE">نشط</option>
+                <option value="INACTIVE">غير نشط</option>
+                <option value="BLACKLISTED">قائمة سوداء</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className={labelCls}>Ã™â€¦Ã™â€žÃ˜Â§Ã˜Â­Ã˜Â¸Ã˜Â§Ã˜Âª</label>
-            <textarea className={`${inputCls} min-h-[120px]`} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Ã™â€¦Ã™â€žÃ˜Â§Ã˜Â­Ã˜Â¸Ã˜Â§Ã˜Âª Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ™Å Ã˜Â© Ã˜Â¹Ã™â€  Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã˜Â£Ã™Ë† Ã˜ÂªÃ™ÂÃ˜Â¶Ã™Å Ã™â€žÃ˜Â§Ã˜ÂªÃ™â€¡" />
+            <label className={labelCls}>ملاحظات</label>
+            <textarea className={`${inputCls} min-h-[120px]`} value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="ملاحظات إضافية عن المستأجر أو تفضيلاته" />
           </div>
 
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
             <button type="button" onClick={() => setIsModalOpen(false)} className={ghostButton}>
-              Ã˜Â¥Ã™â€žÃ˜ÂºÃ˜Â§Ã˜Â¡
+              إلغاء
             </button>
             <button type="submit" className={primaryButton}>
-              {editingTenant ? 'Ã˜Â­Ã™ÂÃ˜Â¸ Ã˜Â§Ã™â€žÃ˜ÂªÃ˜Â¹Ã˜Â¯Ã™Å Ã™â€žÃ˜Â§Ã˜Âª' : 'Ã˜Â¥Ã˜Â¶Ã˜Â§Ã™ÂÃ˜Â© Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±'}
+              {editingTenant ? 'حفظ التعديلات' : 'إضافة المستأجر'}
             </button>
           </div>
         </form>
       </Modal>
 
-      <Modal isOpen={!!tenantToDelete} onClose={() => setTenantToDelete(null)} title="Ã˜ÂªÃ˜Â£Ã™Æ’Ã™Å Ã˜Â¯ Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±" size="sm">
-        <div className="space-y-4">
+      <Modal isOpen={!!tenantToDelete} onClose={() => setTenantToDelete(null)} title="تأكيد حذف المستأجر" size="sm">
+        <div className="space-y-6">
           <div className="flex items-center gap-4">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-300">
               <Trash2 size={18} />
             </div>
             <div>
-              <h3 className="text-base font-semibold text-slate-900 dark:text-white">Ã™â€¡Ã™â€ž Ã˜Â£Ã™â€ Ã˜Âª Ã™â€¦Ã˜ÂªÃ˜Â£Ã™Æ’Ã˜Â¯ Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â­Ã˜Â°Ã™ÂÃ˜Å¸</h3>
-              <p className="text-sm text-slate-600 dark:text-slate-300">Ã˜Â³Ã™Å Ã˜ÂªÃ™â€¦ Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± Ã™â€ Ã™â€¡Ã˜Â§Ã˜Â¦Ã™Å Ã™â€¹Ã˜Â§ Ã™â€¦Ã™â€  Ã˜Â§Ã™â€žÃ˜Â³Ã˜Â¬Ã™â€ž.</p>
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white">هل أنت متأكد من الحذف؟</h3>
+              <p className="text-sm text-slate-600 dark:text-slate-300">سيتم حذف المستأجر نهائيًا من السجل.</p>
             </div>
           </div>
           <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 dark:border-rose-500/20 dark:bg-rose-500/10">
             <p className="text-sm text-slate-700 dark:text-slate-200">
-              Ã˜Â³Ã™Å Ã˜ÂªÃ™â€¦ Ã˜Â­Ã˜Â°Ã™Â Ã™â€¦Ã™â€žÃ™Â Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â± <strong className="font-semibold text-slate-900 dark:text-white">{tenantToDelete?.name || 'Ã¢â‚¬â€'}</strong> Ã™â€¦Ã™â€  Ã™â€šÃ˜Â§Ã˜Â¹Ã˜Â¯Ã˜Â© Ã˜Â§Ã™â€žÃ˜Â¨Ã™Å Ã˜Â§Ã™â€ Ã˜Â§Ã˜Âª Ã™â€ Ã™â€¡Ã˜Â§Ã˜Â¦Ã™Å Ã™â€¹Ã˜Â§.
-              Ã˜ÂªÃ˜Â£Ã™Æ’Ã˜Â¯ Ã™â€¦Ã™â€  Ã˜Â¹Ã˜Â¯Ã™â€¦ Ã™Ë†Ã˜Â¬Ã™Ë†Ã˜Â¯ Ã˜Â¹Ã™â€šÃ™Ë†Ã˜Â¯ Ã™ÂÃ˜Â¹Ã˜Â§Ã™â€žÃ˜Â© Ã™â€¦Ã˜Â±Ã˜ÂªÃ˜Â¨Ã˜Â·Ã˜Â© Ã˜Â¨Ã™â€¡ Ã™â€šÃ˜Â¨Ã™â€ž Ã˜Â§Ã™â€žÃ™â€¦Ã˜ÂªÃ˜Â§Ã˜Â¨Ã˜Â¹Ã˜Â©.
+              سيتم حذف ملف المستأجر <strong className="font-semibold text-slate-900 dark:text-white">{tenantToDelete?.name || '—'}</strong> من قاعدة البيانات نهائيًا.
+              تأكد من عدم وجود عقود فعالة مرتبطة به قبل المتابعة.
             </p>
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-200 pt-6 dark:border-slate-800">
             <button onClick={() => setTenantToDelete(null)} className={ghostButton}>
-              Ã˜Â¥Ã™â€žÃ˜ÂºÃ˜Â§Ã˜Â¡
+              إلغاء
             </button>
             <button onClick={handleDelete} className={dangerButton}>
-              Ã˜Â­Ã˜Â°Ã™Â Ã˜Â§Ã™â€žÃ™â€¦Ã˜Â³Ã˜ÂªÃ˜Â£Ã˜Â¬Ã˜Â±
+              حذف المستأجر
             </button>
           </div>
         </div>
