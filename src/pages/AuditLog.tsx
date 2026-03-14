@@ -69,7 +69,7 @@ const AuditLog: React.FC = () => {
 
   const handleCreateSnapshot = async () => {
     if (!snapshotNote.trim()) {
-      toast.error('ÙŠØ±Ø¬Ù‰ Ø¥Ø¯Ø®Ø§Ù„ ÙˆØµÙ ÙˆØ§Ø¶Ø­ Ù„Ù†Ù‚Ø·Ø© Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø©.');
+      toast.error('يرجى إدخال وصف واضح لنقطة الاستعادة.');
       return;
     }
     await createSnapshot(snapshotNote.trim());
@@ -91,36 +91,36 @@ const AuditLog: React.FC = () => {
 
   return (
     <div className="app-page page-enter" dir="rtl">
-      <PageHeader title="Ø³Ø¬Ù„ Ø§Ù„ØªØ¯Ù‚ÙŠÙ‚ ÙˆÙ†Ù‚Ø§Ø· Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø©" description="Ù…ØªØ§Ø¨Ø¹Ø© Ø¬Ù…ÙŠØ¹ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„Ø­Ø±Ø¬Ø© ÙÙŠ Ø§Ù„Ù†Ø¸Ø§Ù… ÙˆØ¥Ù†Ø´Ø§Ø¡ Ù†Ù‚Ø§Ø· Ø±Ø¬ÙˆØ¹ Ø¢Ù…Ù†Ø© Ù‚Ø¨Ù„ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª Ø§Ù„Ù…Ù‡Ù…Ø©.">
+      <PageHeader title="سجل التدقيق ونقاط الاستعادة" description="متابعة جميع العمليات الحرجة في النظام وإنشاء نقاط رجوع آمنة قبل التعديلات المهمة.">
         <div className="flex flex-wrap gap-3">
           <button onClick={() => navigate('/audit/integrity')} className={ghostButton}>
             <Stethoscope size={18} />
-            ÙØ­Øµ Ø³Ù„Ø§Ù…Ø© Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª
+            فحص سلامة البيانات
           </button>
           <button onClick={() => setIsCreateModalOpen(true)} className={primaryButton}>
             <PlusCircle size={18} />
-            Ø¥Ù†Ø´Ø§Ø¡ Ù†Ù‚Ø·Ø© Ø§Ø³ØªØ¹Ø§Ø¯Ø©
+            إنشاء نقطة استعادة
           </button>
         </div>
       </PageHeader>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <SummaryStatCard icon={<History size={18} />} color="blue" title="Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø£Ø­Ø¯Ø§Ø« Ø§Ù„ØªØ¯Ù‚ÙŠÙ‚" value={stats.events.toLocaleString('ar')} />
-        <SummaryStatCard icon={<ShieldCheck size={18} />} color="emerald" title="Ù†Ù‚Ø§Ø· Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø©" value={stats.snapshots.toLocaleString('ar')} />
-        <SummaryStatCard icon={<Search size={18} />} color="amber" title="Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙˆÙ† Ø§Ù„Ù†Ø´Ø·ÙˆÙ†" value={stats.users.toLocaleString('ar')} />
-        <SummaryStatCard icon={<AlertTriangle size={18} />} color="rose" title="Ø£Ø­Ø¯Ø§Ø« Ø­Ø³Ø§Ø³Ø©" value={stats.destructive.toLocaleString('ar')} />
+        <SummaryStatCard icon={<History size={18} />} color="blue" title="إجمالي أحداث التدقيق" value={stats.events.toLocaleString('ar')} />
+        <SummaryStatCard icon={<ShieldCheck size={18} />} color="emerald" title="نقاط الاستعادة" value={stats.snapshots.toLocaleString('ar')} />
+        <SummaryStatCard icon={<Search size={18} />} color="amber" title="المستخدمون النشطون" value={stats.users.toLocaleString('ar')} />
+        <SummaryStatCard icon={<AlertTriangle size={18} />} color="rose" title="أحداث حساسة" value={stats.destructive.toLocaleString('ar')} />
       </div>
 
       <Card className="p-4 sm:p-5">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">Ù†Ù‚Ø§Ø· Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ù†Ø¸Ø§Ù…</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">Ø£Ù†Ø´Ø¦ Ù†Ù‚Ø·Ø© Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‚Ø¨Ù„ Ø§Ù„Ø¹Ù…Ù„ÙŠØ§Øª Ø§Ù„Ø«Ù‚ÙŠÙ„Ø© Ù„ØªØªÙ…ÙƒÙ† Ù…Ù† Ø§Ù„Ø±Ø¬ÙˆØ¹ Ø§Ù„ÙƒØ§Ù…Ù„ Ø¹Ù†Ø¯ Ø§Ù„Ø­Ø§Ø¬Ø©.</p>
+            <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">نقاط استعادة النظام</h2>
+            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">أنشئ نقطة استعادة قبل العمليات الثقيلة لتتمكن من الرجوع الكامل عند الحاجة.</p>
           </div>
         </div>
 
         {db.snapshots.length === 0 ? (
-          <EmptyState icon={ShieldCheck} title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†Ù‚Ø§Ø· Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù…Ø­ÙÙˆØ¸Ø©" description="Ø§Ø¨Ø¯Ø£ Ø¨Ø¥Ù†Ø´Ø§Ø¡ Ù†Ù‚Ø·Ø© Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø¬Ø¯ÙŠØ¯Ø© Ù‚Ø¨Ù„ ØªÙ†ÙÙŠØ° Ø¹Ù…Ù„ÙŠØ§Øª Ø­Ø³Ø§Ø³Ø© Ø£Ùˆ ØªØºÙŠÙŠØ±Ø§Øª ÙƒØ¨ÙŠØ±Ø© Ø¹Ù„Ù‰ Ø§Ù„Ø¨ÙŠØ§Ù†Ø§Øª." />
+          <EmptyState icon={ShieldCheck} title="لا توجد نقاط استعادة محفوظة" description="ابدأ بإنشاء نقطة استعادة جديدة قبل تنفيذ عمليات حساسة أو تغييرات كبيرة على البيانات." />
         ) : (
           <div className="space-y-3">
             {db.snapshots.map((snapshot) => (
@@ -131,7 +131,7 @@ const AuditLog: React.FC = () => {
                 </div>
                 <button onClick={() => setSnapshotToRestore(snapshot)} className={dangerButton}>
                   <RotateCcw size={16} />
-                  Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‡Ø°Ù‡ Ø§Ù„Ù†Ù‚Ø·Ø©
+                  استعادة هذه النقطة
                 </button>
               </div>
             ))}
@@ -142,25 +142,25 @@ const AuditLog: React.FC = () => {
       <Card className="p-4 sm:p-5">
         <div className="mb-5 flex flex-wrap items-end gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 dark:border-slate-800 dark:bg-slate-800/70">
           <div className="min-w-[240px] flex-1">
-            <label className={labelCls}>Ø¨Ø­Ø« Ø¨Ø§Ù„Ù…Ø¹Ø±Ù‘Ù Ø£Ùˆ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label>
-            <input className={inputCls} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Ø§Ø¨Ø­Ø« ÙÙŠ Ø§Ù„Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø£Ùˆ Ù…Ø¹Ø±Ù Ø§Ù„ÙƒÙŠØ§Ù†..." />
+            <label className={labelCls}>بحث بالمعرّف أو الملاحظات</label>
+            <input className={inputCls} value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث في الملاحظات أو معرف الكيان..." />
           </div>
           <div className="min-w-[180px]">
-            <label className={labelCls}>ÙÙ„ØªØ±Ø© Ø¨Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</label>
+            <label className={labelCls}>فلترة بالمستخدم</label>
             <select className={inputCls} value={selectedUser} onChange={(e) => setSelectedUser(e.target.value)}>
               {uniqueUsers.map((user) => (
                 <option key={user} value={user}>
-                  {user === 'all' ? 'ÙƒÙ„ Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…ÙŠÙ†' : user}
+                  {user === 'all' ? 'كل المستخدمين' : user}
                 </option>
               ))}
             </select>
           </div>
           <div className="min-w-[180px]">
-            <label className={labelCls}>ÙÙ„ØªØ±Ø© Ø¨Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡</label>
+            <label className={labelCls}>فلترة بالإجراء</label>
             <select className={inputCls} value={selectedAction} onChange={(e) => setSelectedAction(e.target.value)}>
               {uniqueActions.map((action) => (
                 <option key={action} value={action}>
-                  {action === 'all' ? 'ÙƒÙ„ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª' : action}
+                  {action === 'all' ? 'كل الإجراءات' : action}
                 </option>
               ))}
             </select>
@@ -168,23 +168,23 @@ const AuditLog: React.FC = () => {
           {(searchTerm || selectedUser !== 'all' || selectedAction !== 'all') && (
             <button onClick={resetFilters} className={ghostButton}>
               <XCircle size={16} />
-              ØªØµÙÙŠØ© Ø§Ù„ÙÙ„Ø§ØªØ±
+              تصفية الفلاتر
             </button>
           )}
         </div>
 
         {filteredLog.length === 0 ? (
-          <EmptyState icon={Search} title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ù†ØªØ§Ø¦Ø¬ Ù…Ø·Ø§Ø¨Ù‚Ø©" description="ØºÙŠÙ‘Ø± Ø§Ù„ÙÙ„Ø§ØªØ± Ø§Ù„Ø­Ø§Ù„ÙŠØ© Ø£Ùˆ Ø§Ù…Ø³Ø­ Ø§Ù„Ø¨Ø­Ø« Ù„Ø¹Ø±Ø¶ ÙƒÙ„ Ø³Ø¬Ù„Ø§Øª Ø§Ù„ØªØ¯Ù‚ÙŠÙ‚." />
+          <EmptyState icon={Search} title="لا توجد نتائج مطابقة" description="غيّر الفلاتر الحالية أو امسح البحث لعرض كل سجلات التدقيق." />
         ) : (
           <TableWrapper>
             <thead className="bg-slate-50 dark:bg-slate-800/70">
               <tr>
-                <Th>Ø§Ù„ÙˆÙ‚Øª</Th>
-                <Th>Ø§Ù„Ù…Ø³ØªØ®Ø¯Ù…</Th>
-                <Th>Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡</Th>
-                <Th>Ø§Ù„ÙƒÙŠØ§Ù†</Th>
-                <Th>Ø§Ù„Ù…Ø¹Ø±Ù‘Ù</Th>
-                <Th>Ù…Ù„Ø§Ø­Ø¸Ø§Øª</Th>
+                <Th>الوقت</Th>
+                <Th>المستخدم</Th>
+                <Th>الإجراء</Th>
+                <Th>الكيان</Th>
+                <Th>المعرّف</Th>
+                <Th>ملاحظات</Th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -194,8 +194,8 @@ const AuditLog: React.FC = () => {
                   <Td>{log.username}</Td>
                   <Td className={`font-mono font-bold ${getActionClass(log.action)}`}>{log.action}</Td>
                   <Td>{log.entity}</Td>
-                  <Td className="font-mono text-xs" title={log.entityId || ''}>{log.entityId ? `${String(log.entityId).slice(0, 8)}...` : 'â€”'}</Td>
-                  <Td className="max-w-[320px] text-sm leading-6 text-slate-600 dark:text-slate-300">{log.note || 'â€”'}</Td>
+                  <Td className="font-mono text-xs" title={log.entityId || ''}>{log.entityId ? `${String(log.entityId).slice(0, 8)}...` : '—'}</Td>
+                  <Td className="max-w-[320px] text-sm leading-6 text-slate-600 dark:text-slate-300">{log.note || '—'}</Td>
                 </Tr>
               ))}
             </tbody>
@@ -203,29 +203,29 @@ const AuditLog: React.FC = () => {
         )}
       </Card>
 
-      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="Ø¥Ù†Ø´Ø§Ø¡ Ù†Ù‚Ø·Ø© Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø¬Ø¯ÙŠØ¯Ø©" size="sm">
+      <Modal isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)} title="إنشاء نقطة استعادة جديدة" size="sm">
         <div className="space-y-4">
           <div>
-            <label className={labelCls}>ÙˆØµÙ Ù†Ù‚Ø·Ø© Ø§Ù„Ø§Ø³ØªØ¹Ø§Ø¯Ø©</label>
-            <input className={inputCls} value={snapshotNote} onChange={(e) => setSnapshotNote(e.target.value)} placeholder="Ù…Ø«Ø§Ù„: Ù‚Ø¨Ù„ Ø¥Ù‚ÙØ§Ù„ Ø§Ù„Ø´Ù‡Ø± Ø§Ù„Ù…Ø§Ù„ÙŠ" autoFocus />
+            <label className={labelCls}>وصف نقطة الاستعادة</label>
+            <input className={inputCls} value={snapshotNote} onChange={(e) => setSnapshotNote(e.target.value)} placeholder="مثال: قبل إقفال الشهر المالي" autoFocus />
           </div>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <button onClick={() => setIsCreateModalOpen(false)} className={ghostButton}>Ø¥Ù„ØºØ§Ø¡</button>
-            <button onClick={handleCreateSnapshot} className={primaryButton}>Ø­ÙØ¸ Ø§Ù„Ù†Ù‚Ø·Ø©</button>
+            <button onClick={() => setIsCreateModalOpen(false)} className={ghostButton}>إلغاء</button>
+            <button onClick={handleCreateSnapshot} className={primaryButton}>حفظ النقطة</button>
           </div>
         </div>
       </Modal>
 
-      <Modal isOpen={!!snapshotToRestore} onClose={() => setSnapshotToRestore(null)} title="ØªØ£ÙƒÙŠØ¯ Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù†Ù‚Ø·Ø© Ø³Ø§Ø¨Ù‚Ø©" size="md">
+      <Modal isOpen={!!snapshotToRestore} onClose={() => setSnapshotToRestore(null)} title="تأكيد استعادة نقطة سابقة" size="md">
         <div className="space-y-4">
           <p className="text-sm leading-7 text-slate-600 dark:text-slate-300">
-            Ø£Ù†Øª Ø¹Ù„Ù‰ ÙˆØ´Ùƒ Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ø§Ù„Ù†Ø¸Ø§Ù… Ø¥Ù„Ù‰ Ø§Ù„Ø­Ø§Ù„Ø© Ø§Ù„ØªÙŠ ÙƒØ§Ù† Ø¹Ù„ÙŠÙ‡Ø§ Ø¹Ù†Ø¯ Ø§Ù„Ù†Ù‚Ø·Ø©:
-            <strong className="mx-1 text-slate-800 dark:text-slate-100">{snapshotToRestore?.note || 'â€”'}</strong>
-            Ø¨ØªØ§Ø±ÙŠØ® {snapshotToRestore ? formatDateTime(new Date(snapshotToRestore.ts).toISOString()) : 'â€”'}.
+            أنت على وشك استعادة النظام إلى الحالة التي كان عليها عند النقطة:
+            <strong className="mx-1 text-slate-800 dark:text-slate-100">{snapshotToRestore?.note || '—'}</strong>
+            بتاريخ {snapshotToRestore ? formatDateTime(new Date(snapshotToRestore.ts).toISOString()) : '—'}.
           </p>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-            <button onClick={() => setSnapshotToRestore(null)} className={ghostButton}>Ø¥Ù„ØºØ§Ø¡</button>
-            <button onClick={handleRestore} className={dangerButton}>Ø§Ø³ØªØ¹Ø§Ø¯Ø© Ù‡Ø°Ù‡ Ø§Ù„Ù†Ù‚Ø·Ø©</button>
+            <button onClick={() => setSnapshotToRestore(null)} className={ghostButton}>إلغاء</button>
+            <button onClick={handleRestore} className={dangerButton}>استعادة هذه النقطة</button>
           </div>
         </div>
       </Modal>
