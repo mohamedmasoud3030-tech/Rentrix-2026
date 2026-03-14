@@ -143,7 +143,7 @@ const Dashboard: React.FC = () => {
       ...openMaintenance.slice(0, 2).map((record) => ({
         id: record.id,
         title: 'طلب صيانة مفتوح',
-        detail: record.issueTitle,
+        detail: record.issueTitle || record.description || 'طلب صيانة بدون عنوان',
         path: '/maintenance',
       })),
     ].slice(0, 6);

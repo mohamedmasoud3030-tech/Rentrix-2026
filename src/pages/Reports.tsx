@@ -799,7 +799,7 @@ const Reports: React.FC = () => {
                     const property = db.properties.find((item) => item.id === record.propertyId);
                     return (
                       <Tr key={record.id}>
-                        <Td data-label="العنوان">{record.issueTitle}</Td>
+                        <Td data-label="العنوان">{record.issueTitle || record.description || 'طلب صيانة'}</Td>
                         <Td data-label="العقار">{property?.name || 'غير محدد'}</Td>
                         <Td data-label="الحالة">{record.status}</Td>
                         <Td data-label="التاريخ">{formatDate(record.requestDate)}</Td>

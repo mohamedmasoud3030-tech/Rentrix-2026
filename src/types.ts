@@ -61,17 +61,24 @@ export interface AccountMappings {
 
 export interface CompanyInfo {
   name: string;
+  companyName?: string;
   address: string;
   phone: string;
   email: string;
   logo: string;
+  companyLogo?: string;
   logoDataUrl?: string;
   appName?: string;
   tagline?: string;
+  companyTagline?: string;
   primaryColor?: string;
+  companyPrimaryColor?: string;
   reportHeaderText?: string;
+  reportHeader?: string;
   reportFooterText?: string;
+  reportFooter?: string;
   defaultTheme?: 'light' | 'dark';
+  themeMode?: 'light' | 'dark';
   googleClientId?: string;
   contractAlertDays?: number;
 }

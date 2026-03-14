@@ -121,7 +121,7 @@ const bottomNavItems: NavItem[] = [
   { label: 'العقود', path: '/contracts', icon: <FileText size={18} /> },
   { label: 'المالية', path: '/financials', icon: <Wallet size={18} /> },
   { label: 'الصيانة', path: '/maintenance', icon: <Wrench size={18} /> },
-  { label: 'الإعدادات', path: '/settings', icon: <Settings size={18} />, permission: 'MANAGE_SETTINGS' },
+  { label: 'التقارير', path: '/reports', icon: <FileBarChart2 size={18} /> },
 ];
 
 const routeLabels: Record<string, string> = {
@@ -234,6 +234,7 @@ const AppShell: React.FC = () => {
   );
 
   const visibleBottomNavItems = useMemo(() => bottomNavItems.filter(canViewItem), [canViewItem]);
+  const visibleQuickActions = useMemo(() => quickActions.filter(canViewItem), [canViewItem]);
 
   const toggleGroup = (label: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -241,13 +242,22 @@ const AppShell: React.FC = () => {
 
   const commandItems: CommandItem[] = useMemo(() => {
     const navItems = visibleNavGroups.flatMap((group) => group.items.map((item) => ({ ...item, badge: group.label })));
-    const quick = quickActions.map((item) => ({ ...item, badge: 'إجراء سريع' }));
-    const misc: CommandItem[] = [
-      { label: 'الإشعارات', path: '/notifications', icon: null as any, badge: 'مركز' },
-      { label: 'سجل التدقيق', path: '/audit', icon: null as any, badge: 'تحكم' },
-    ];
-    return [...quick, ...navItems, ...misc];
-  }, [visibleNavGroups]);
+    const quick = visibleQuickActions.map((item) => ({ ...item, badge: 'إجراء سريع' }));
+    const extraRoutes: CommandItem[] = [
+      { label: 'الأراضي', path: '/lands', icon: null as any, badge: 'العقارات' },
+      { label: 'الخريطة العقارية', path: '/map', icon: null as any, badge: 'العقارات' },
+      { label: 'العمولات', path: '/commissions', icon: null as any, badge: 'المالية' },
+      { label: 'كشف حساب المالك', path: '/owner-ledger', icon: null as any, badge: 'المالية' },
+      { label: 'فحص سلامة البيانات', path: '/audit/integrity', icon: null as any, badge: 'التحليلات' },
+    ].filter(canViewItem);
+
+    const deduped = new Map<string, CommandItem>();
+    [...quick, ...navItems, ...extraRoutes].forEach((item) => {
+      if (!deduped.has(item.path)) deduped.set(item.path, item);
+    });
+
+    return Array.from(deduped.values());
+  }, [canViewItem, visibleNavGroups, visibleQuickActions]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -286,10 +296,10 @@ const AppShell: React.FC = () => {
 
         <div className="px-3 pt-3">
           <div className="rounded-[20px] border border-white/90 bg-white/82 p-3 shadow-sm backdrop-blur-sm dark:border-white/10 dark:bg-white/5">
-            <p className="text-[10px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500">تشغيل يومي</p>
-            <p className="mt-2 text-sm font-black text-slate-900 dark:text-slate-100">تجربة مؤسسية أكثر كثافة</p>
+            <p className="text-[10px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500">{brand.companyName}</p>
+            <p className="mt-2 text-sm font-black text-slate-900 dark:text-slate-100">{brand.reportHeaderText}</p>
             <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">
-              تنقل سريع بين السجلات والعقود والفواتير والتقارير من واجهة واحدة متماسكة.
+              {brand.tagline}
             </p>
           </div>
         </div>
@@ -425,7 +435,7 @@ const AppShell: React.FC = () => {
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-2 lg:mt-2">
-              {quickActions.map((action) => (
+              {visibleQuickActions.map((action) => (
                 <button
                   key={action.path}
                   onClick={() => navigate(action.path)}

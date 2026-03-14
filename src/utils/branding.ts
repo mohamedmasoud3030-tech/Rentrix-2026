@@ -76,13 +76,13 @@ const getPrimaryForeground = (hex: string) => {
 };
 
 export const resolveBrandingFromCompany = (company?: Partial<CompanyInfo>) => {
-  const primaryColor = normalizeHexColor(company?.primaryColor);
-  const companyName = String(company?.name || '').trim();
+  const primaryColor = normalizeHexColor(company?.primaryColor || company?.companyPrimaryColor);
+  const companyName = String(company?.companyName || company?.name || '').trim();
   const appName = String(company?.appName || companyName || 'Rentrix ERP').trim();
-  const logoUrl = String(company?.logoDataUrl || company?.logo || '').trim();
-  const tagline = String(company?.tagline || 'إدارة عقارية ومحاسبية مترابطة').trim();
-  const reportHeaderText = String(company?.reportHeaderText || appName).trim();
-  const reportFooterText = String(company?.reportFooterText || `تم الإنشاء بواسطة ${appName}`).trim();
+  const logoUrl = String(company?.logoDataUrl || company?.companyLogo || company?.logo || '').trim();
+  const tagline = String(company?.tagline || company?.companyTagline || 'إدارة عقارية ومحاسبية مترابطة').trim();
+  const reportHeaderText = String(company?.reportHeaderText || company?.reportHeader || appName).trim();
+  const reportFooterText = String(company?.reportFooterText || company?.reportFooter || `تم الإنشاء بواسطة ${appName}`).trim();
 
   return {
     appName,
@@ -92,7 +92,7 @@ export const resolveBrandingFromCompany = (company?: Partial<CompanyInfo>) => {
     tagline,
     reportHeaderText,
     reportFooterText,
-    defaultTheme: normalizeThemeMode(company?.defaultTheme),
+    defaultTheme: normalizeThemeMode(company?.defaultTheme || company?.themeMode),
   };
 };
 

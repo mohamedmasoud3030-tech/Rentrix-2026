@@ -1,23 +1,24 @@
 import React, { useMemo, useState } from 'react';
+import { toast } from 'react-hot-toast';
+import {
+  CalendarClock,
+  Check,
+  Copy,
+  MessageSquare,
+  Phone,
+  Send,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import type { OutgoingNotification } from '../types';
+import { sanitizePhoneNumber } from '../utils/helpers';
 import Card from '../components/ui/Card';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
-import { sanitizePhoneNumber } from '../utils/helpers';
-import {
-  Send,
-  MessageSquare,
-  Copy,
-  Check,
-  Trash2,
-  Phone,
-  CalendarClock,
-  Sparkles,
-} from 'lucide-react';
-import { toast } from 'react-hot-toast';
 import StatusPill from '../components/ui/StatusPill';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 const primaryBtn =
   'inline-flex items-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-500/20 transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-60';
@@ -29,10 +30,12 @@ const subtleBtn =
 const CommunicationHub: React.FC = () => {
   const { db, generateNotifications, dataService } = useApp();
   const [isLoading, setIsLoading] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const notifications = useMemo(
     () => [...(db.outgoingNotifications || [])].sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0)),
-    [db.outgoingNotifications]
+    [db.outgoingNotifications],
   );
 
   const pendingCount = notifications.filter((item) => item.status === 'PENDING').length;
@@ -56,8 +59,12 @@ const CommunicationHub: React.FC = () => {
   };
 
   const handleMarkAsSent = async (id: string) => {
-    await dataService.update('outgoingNotifications', id, { status: 'SENT' });
-    toast.success('تم تحديث حالة الإشعار.');
+    try {
+      await dataService.update('outgoingNotifications', id, { status: 'SENT' }, { silent: true });
+      toast.success('تم تحديث حالة الإشعار.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر تحديث حالة الإشعار.');
+    }
   };
 
   const handleSendWhatsApp = async (notification: OutgoingNotification) => {
@@ -66,14 +73,24 @@ const CommunicationHub: React.FC = () => {
       toast.error('رقم هاتف المستلم غير صالح.');
       return;
     }
-    const text = encodeURIComponent(notification.message);
+
+    const text = encodeURIComponent(notification.message || '');
     window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
     await handleMarkAsSent(notification.id);
   };
 
-  const handleDelete = async (id: string) => {
-    await dataService.remove('outgoingNotifications', id);
-    toast.success('تم حذف الإشعار.');
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+    try {
+      setIsDeleting(true);
+      await dataService.remove('outgoingNotifications', pendingDeleteId, { silent: true });
+      toast.success('تم حذف الإشعار.');
+      setPendingDeleteId(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حذف الإشعار.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -109,7 +126,7 @@ const CommunicationHub: React.FC = () => {
             <h2 className="text-xl font-extrabold text-slate-800">قائمة الإشعارات</h2>
             <p className="mt-1 text-sm text-slate-500">رسائل التذكير والتنبيه التي يمكن إرسالها مباشرة أو نسخها ومشاركتها يدويًا.</p>
           </div>
-          {isLoading && <LoadingSpinner label="جاري تحليل العقود والفواتير..." />}
+          {isLoading ? <LoadingSpinner label="جاري تحليل العقود والفواتير..." /> : null}
         </div>
 
         {notifications.length === 0 ? (
@@ -129,6 +146,7 @@ const CommunicationHub: React.FC = () => {
             {notifications.map((notification) => {
               const recipient = notification.recipientName || notification.recipient || 'مستلم غير محدد';
               const recipientContact = notification.recipientContact || notification.recipient || '—';
+
               return (
                 <div key={notification.id} className="rounded-2xl border border-slate-100 bg-slate-50/60 p-5 shadow-sm">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -158,17 +176,20 @@ const CommunicationHub: React.FC = () => {
                         <Send size={16} />
                         إرسال عبر واتساب
                       </button>
-                      {notification.status === 'PENDING' && (
-                        <button onClick={() => handleMarkAsSent(notification.id)} className={secondaryBtn}>
+                      {notification.status === 'PENDING' ? (
+                        <button onClick={() => void handleMarkAsSent(notification.id)} className={secondaryBtn}>
                           <Check size={16} />
                           تأشير كمرسل
                         </button>
-                      )}
-                      <button onClick={() => handleCopy(notification.message)} className={subtleBtn}>
+                      ) : null}
+                      <button onClick={() => void handleCopy(notification.message || '')} className={subtleBtn}>
                         <Copy size={16} />
                         نسخ الرسالة
                       </button>
-                      <button onClick={() => handleDelete(notification.id)} className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50">
+                      <button
+                        onClick={() => setPendingDeleteId(notification.id)}
+                        className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-medium text-rose-600 transition-colors hover:bg-rose-50"
+                      >
                         <Trash2 size={16} />
                         حذف الإشعار
                       </button>
@@ -180,6 +201,20 @@ const CommunicationHub: React.FC = () => {
           </div>
         )}
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!pendingDeleteId}
+        title="تأكيد حذف الإشعار"
+        message="سيتم حذف هذا الإشعار من السجل الحالي."
+        confirmLabel="حذف"
+        cancelLabel="إلغاء"
+        loading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (isDeleting) return;
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 };

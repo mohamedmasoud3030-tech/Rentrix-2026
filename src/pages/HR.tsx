@@ -14,6 +14,7 @@ import {
 import PageHeader from '../components/ui/PageHeader';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 import { useApp } from '../contexts/AppContext';
 import { User, UserRole } from '../types';
@@ -53,6 +54,8 @@ const HR: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [form, setForm] = useState<UserFormState>(emptyForm);
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingResetUser, setPendingResetUser] = useState<User | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
 
   const totalUsers = users.length;
   const elevatedUsers = users.filter((u) => u.role === 'ADMIN' || u.role === 'MANAGER').length;
@@ -143,7 +146,22 @@ const HR: React.FC = () => {
       toast.error('لا يمكنك فرض إعادة تعيين كلمة المرور لنفسك من هنا');
       return;
     }
-    await auth.forcePasswordReset(user.id);
+    setPendingResetUser(user);
+  };
+
+  const confirmForceReset = async () => {
+    if (!pendingResetUser) return;
+
+    try {
+      setIsResetting(true);
+      await auth.forcePasswordReset(pendingResetUser.id);
+      toast.success('تم فرض إعادة تعيين كلمة المرور بنجاح.');
+      setPendingResetUser(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر فرض إعادة تعيين كلمة المرور.');
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   return (
@@ -357,6 +375,20 @@ const HR: React.FC = () => {
           </div>
         </div>
       </Modal>
+
+      <ConfirmDialog
+        isOpen={!!pendingResetUser}
+        title="تأكيد فرض إعادة التعيين"
+        message={`سيُطلب من المستخدم "${pendingResetUser?.username || ''}" تغيير كلمة المرور عند تسجيل الدخول التالي.`}
+        confirmLabel="تأكيد"
+        cancelLabel="إلغاء"
+        loading={isResetting}
+        onConfirm={confirmForceReset}
+        onCancel={() => {
+          if (isResetting) return;
+          setPendingResetUser(null);
+        }}
+      />
     </div>
   );
 };

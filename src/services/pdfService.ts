@@ -15,6 +15,7 @@ import {
 } from '../types';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import { tafneeta } from '../utils/numberToArabic';
+import { resolveBrandingFromSettings } from '../utils/branding';
 
 type Alignment = 'right' | 'left' | 'center';
 
@@ -107,15 +108,17 @@ const createArabicPdf = (orientation: 'p' | 'l' = 'p') => {
 
 const drawHeader = (doc: jsPDF, settings: Settings, title: string, generatedAt: string, reportDateLabel?: string) => {
   const company = settings.company || { name: '', address: '', phone: '', email: '', logo: '' };
+  const brand = resolveBrandingFromSettings(settings);
+  const logoUrl = company.logoDataUrl || company.companyLogo || company.logo || '';
   const pageWidth = doc.internal.pageSize.getWidth();
 
   doc.setDrawColor(216, 223, 232);
   doc.setFillColor(248, 250, 252);
   doc.roundedRect(12, 10, pageWidth - 24, 34, 4, 4, 'FD');
 
-  if (company.logoDataUrl) {
+  if (logoUrl) {
     try {
-      doc.addImage(company.logoDataUrl, detectImageFormat(company.logoDataUrl), 16, 15, 15, 15);
+      doc.addImage(logoUrl, detectImageFormat(logoUrl), 16, 15, 15, 15);
     } catch {
       // ignore invalid logo
     }
@@ -123,10 +126,10 @@ const drawHeader = (doc: jsPDF, settings: Settings, title: string, generatedAt: 
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(14);
-  doc.text(safeText(company.name), pageWidth - 16, 18, { align: 'right' });
+  doc.text(safeText(brand.reportHeaderText), pageWidth - 16, 18, { align: 'right' });
   doc.setFontSize(9.5);
   doc.setTextColor(71, 85, 105);
-  doc.text('Rentrix ERP', pageWidth - 16, 24, { align: 'right' });
+  doc.text(brand.appName, pageWidth - 16, 24, { align: 'right' });
   doc.setFontSize(13);
   doc.setTextColor(15, 23, 42);
   doc.text(title, pageWidth / 2, 30, { align: 'center' });
@@ -134,7 +137,7 @@ const drawHeader = (doc: jsPDF, settings: Settings, title: string, generatedAt: 
   doc.setTextColor(100, 116, 139);
   doc.text(`تاريخ الطباعة: ${generatedAt}`, pageWidth - 16, 36, { align: 'right' });
 
-  const contact = [company.address, company.phone, company.email].filter(Boolean).join(' | ');
+  const contact = [brand.companyName, company.address, company.phone, company.email].filter(Boolean).join(' | ');
   if (contact) {
     doc.text(contact, pageWidth / 2, 40, { align: 'center' });
   }
@@ -251,6 +254,7 @@ const drawNotes = (doc: jsPDF, y: number, notes: string[] = []) => {
 };
 
 const addFooters = (doc: jsPDF, settings: Settings, generatedAt: string) => {
+  const brand = resolveBrandingFromSettings(settings);
   const totalPages = doc.getNumberOfPages();
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -261,7 +265,7 @@ const addFooters = (doc: jsPDF, settings: Settings, generatedAt: string) => {
     doc.line(12, pageHeight - 14, pageWidth - 12, pageHeight - 14);
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text(`Rentrix ERP • ${generatedAt}`, pageWidth - 12, pageHeight - 8, { align: 'right' });
+    doc.text(`${brand.reportFooterText} • ${generatedAt}`, pageWidth - 12, pageHeight - 8, { align: 'right' });
     doc.text(`الصفحة ${page} من ${totalPages}`, 12, pageHeight - 8, { align: 'left' });
   }
 };

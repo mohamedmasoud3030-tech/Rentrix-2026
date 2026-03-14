@@ -1,9 +1,9 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
-import { VitePWA } from 'vite-plugin-pwa'
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+import path from 'path';
+import { VitePWA } from 'vite-plugin-pwa';
+import pkg from './package.json';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   base: '/',
   plugins: [
@@ -30,28 +30,34 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,json}'],
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: true,
       },
     }),
   ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      'components': path.resolve(__dirname, './src/components'),
-      'pages': path.resolve(__dirname, './src/pages'),
-      'contexts': path.resolve(__dirname, './src/contexts'),
-      'utils': path.resolve(__dirname, './src/utils'),
-      'services': path.resolve(__dirname, './src/services'),
-      'hooks': path.resolve(__dirname, './src/hooks'),
-      'types': path.resolve(__dirname, './src/types.ts'),
+      components: path.resolve(__dirname, './src/components'),
+      pages: path.resolve(__dirname, './src/pages'),
+      contexts: path.resolve(__dirname, './src/contexts'),
+      utils: path.resolve(__dirname, './src/utils'),
+      services: path.resolve(__dirname, './src/services'),
+      hooks: path.resolve(__dirname, './src/hooks'),
+      types: path.resolve(__dirname, './src/types.ts'),
     },
   },
   build: {
     outDir: 'dist',
     sourcemap: false,
   },
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+  },
   server: {
     port: 3000,
     host: '0.0.0.0',
     hmr: false,
   },
-})
+});

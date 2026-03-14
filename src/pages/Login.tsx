@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Lock, ShieldCheck, User } from 'lucide-react';
+import { ArrowLeft, Building2, Lock, ShieldCheck, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
@@ -55,20 +55,18 @@ const Login: React.FC = () => {
 
       <div className="relative grid w-full max-w-6xl overflow-hidden rounded-[36px] border border-slate-200/80 bg-white/90 shadow-[0_40px_90px_-35px_rgba(15,23,42,0.22)] backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/88 lg:grid-cols-[1.05fr_0.95fr]">
         <div className="hidden border-l border-slate-200/80 bg-[linear-gradient(135deg,#eaf4ff_0%,#f8fbff_46%,#ffffff_100%)] p-10 dark:border-slate-800 dark:bg-[linear-gradient(135deg,#162334_0%,#1b2b3d_46%,#1e3146_100%)] lg:block">
-          <div className="inline-flex h-14 w-14 items-center justify-center rounded-[22px] bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500 text-white shadow-brand">
-            <ShieldCheck size={24} />
+          <div className="inline-flex h-14 w-14 items-center justify-center overflow-hidden rounded-[22px] text-white shadow-brand" style={heroIconStyle}>
+            {logoUrl ? <img src={logoUrl} alt={brand.companyName} className="h-full w-full object-cover" /> : <ShieldCheck size={24} />}
           </div>
 
-          <h1 className="mt-8 text-3xl font-black tracking-tight text-slate-900 dark:text-white">مرحبًا بك في Rentrix ERP</h1>
-          <p className="mt-3 max-w-md text-sm leading-8 text-slate-600 dark:text-slate-300">
-            منصة تشغيل عقاري ومحاسبي موحدة لإدارة العقارات والوحدات والعقود والتحصيلات والصيانة ضمن واجهة عمل مؤسسية حديثة.
-          </p>
+          <h1 className="mt-8 text-3xl font-black tracking-tight text-slate-900 dark:text-white">{`مرحبًا بك في ${brand.appName}`}</h1>
+          <p className="mt-3 max-w-md text-sm leading-8 text-slate-600 dark:text-slate-300">{brand.tagline}</p>
 
           <div className="mt-10 grid gap-4">
             {[
-              'إدارة العقارات والوحدات من مساحة عمل موحدة',
-              'متابعة العقود والتحصيلات والمتأخرات في تدفق واحد',
-              'تقارير تشغيلية ومالية قابلة للطباعة والتصدير',
+              `تشغيل موحد تحت علامة ${brand.companyName}`,
+              'متابعة العقود والتحصيلات والمتأخرات من نفس مساحة العمل',
+              'تقارير ومستندات مطبوعة تحمل نفس الهوية والشعار',
             ].map((item) => (
               <div key={item} className="flex items-start gap-3 rounded-2xl border border-white/80 bg-white/80 px-4 py-3 text-sm text-slate-700 shadow-sm dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
                 <span className="mt-1 h-2 w-2 rounded-full bg-primary" />
@@ -80,13 +78,11 @@ const Login: React.FC = () => {
 
         <div className="p-6 sm:p-8 lg:p-10">
           <div className="mb-8 text-center lg:text-right">
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-[24px] bg-blue-50 text-blue-600 shadow-brand dark:bg-blue-500/10 dark:text-blue-300 lg:mx-0">
-              <ShieldCheck className="h-8 w-8" />
+            <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-[24px] text-white shadow-brand lg:mx-0" style={heroIconStyle}>
+              {logoUrl ? <img src={logoUrl} alt={brand.companyName} className="h-full w-full object-cover" /> : <Building2 className="h-8 w-8" />}
             </div>
-            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900 dark:text-white">تسجيل الدخول للنظام</h2>
-            <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">
-              أدخل بياناتك للوصول إلى لوحة التحكم وإدارة العمليات اليومية.
-            </p>
+            <h2 className="mt-5 text-3xl font-black tracking-tight text-slate-900 dark:text-white">{`تسجيل الدخول إلى ${brand.companyName}`}</h2>
+            <p className="mt-2 text-sm leading-7 text-slate-500 dark:text-slate-400">{brand.reportHeaderText}</p>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
@@ -156,7 +152,7 @@ const Login: React.FC = () => {
           </form>
 
           <div className="mt-8 border-t border-slate-200/80 pt-5 text-center text-xs text-slate-500 dark:border-slate-800 dark:text-slate-400">
-            <p>جميع العمليات محفوظة ومؤمنة داخل نظام Rentrix</p>
+            <p>{brand.reportFooterText}</p>
           </div>
         </div>
       </div>

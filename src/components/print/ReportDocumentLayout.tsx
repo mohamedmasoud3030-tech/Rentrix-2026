@@ -1,6 +1,7 @@
 import React from 'react';
 import { CompanyInfo } from '../../types';
 import { formatDate } from '../../utils/helpers';
+import { resolveBrandingFromCompany } from '../../utils/branding';
 
 export interface ReportLayoutMetadataItem {
   label: string;
@@ -47,21 +48,23 @@ const ReportDocumentLayout: React.FC<ReportDocumentLayoutProps> = ({
   generatedAt,
 }) => {
   const printDate = generatedAt || formatDate(new Date().toISOString());
+  const brand = resolveBrandingFromCompany(company);
+  const logoUrl = brand.logoUrl || company?.logoDataUrl || company?.companyLogo || company?.logo || '';
 
   return (
     <div className="mx-auto w-full max-w-5xl space-y-5 bg-white p-6 text-right text-slate-900 print:max-w-none print:p-0" dir="rtl">
       <header className="rounded-[22px] border border-slate-200 bg-slate-50 px-5 py-4">
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-2">
-            {company?.logoDataUrl ? (
-              <img src={company.logoDataUrl} alt={company?.name || 'شعار الشركة'} className="h-14 w-14 rounded-2xl border border-slate-200 bg-white object-contain p-2" />
+            {logoUrl ? (
+              <img src={logoUrl} alt={brand.companyName || 'شعار الشركة'} className="h-14 w-14 rounded-2xl border border-slate-200 bg-white object-contain p-2" />
             ) : null}
           </div>
           <div className="flex-1 space-y-1">
-            <div className="text-2xl font-black text-slate-950">{company?.name || 'بيانات الشركة'}</div>
-            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">Rentrix ERP</div>
+            <div className="text-2xl font-black text-slate-950">{brand.reportHeaderText}</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{brand.appName}</div>
             <div className="text-sm text-slate-600">{title}</div>
-            <div className="text-xs text-slate-500">{[company?.address, company?.phone, company?.email].filter(Boolean).join(' | ')}</div>
+            <div className="text-xs text-slate-500">{[brand.companyName, company?.address, company?.phone, company?.email].filter(Boolean).join(' | ')}</div>
           </div>
           <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-600">
             <div className="text-xs font-bold text-slate-500">تاريخ الطباعة</div>
@@ -148,7 +151,7 @@ const ReportDocumentLayout: React.FC<ReportDocumentLayoutProps> = ({
       ) : null}
 
       <footer className="flex items-center justify-between border-t border-slate-200 pt-4 text-xs text-slate-500">
-        <span>تم الإنشاء بواسطة Rentrix ERP</span>
+        <span>{brand.reportFooterText}</span>
         <span>{printDate}</span>
       </footer>
     </div>

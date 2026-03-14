@@ -13,6 +13,7 @@ import SearchFilterBar from '../components/shared/SearchFilterBar';
 import TableWrapper, { Td, Th, Tr } from '../components/ui/TableWrapper';
 import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import AttachmentsManager from '../components/shared/AttachmentsManager';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { ContractPrintable } from '../components/print/ContractPrintable';
 import { exportContractToPdf } from '../services/pdfService';
 import { fixMojibake, formatCurrency, formatDate, toArabicDigits } from '../utils/helpers';
@@ -59,8 +60,11 @@ const Contracts: React.FC = () => {
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [printingContract, setPrintingContract] = useState<Contract | null>(null);
   const [defaultUnitId, setDefaultUnitId] = useState<string | undefined>();
+  const [defaultTenantId, setDefaultTenantId] = useState<string | undefined>();
   const [selectedContractId, setSelectedContractId] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | Contract['status']>('ALL');
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const currency = db.settings?.currency || 'OMR';
 
@@ -174,11 +178,13 @@ const Contracts: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const requestedUnitId = params.get('unitId');
+    const requestedTenantId = params.get('tenantId');
     const requestedContractId = params.get('contractId');
 
-    if (params.get('action') === 'add' && requestedUnitId) {
+    if (params.get('new') === '1' || params.get('action') === 'add') {
       setEditingContract(null);
-      setDefaultUnitId(requestedUnitId);
+      setDefaultUnitId(requestedUnitId || undefined);
+      setDefaultTenantId(requestedTenantId || undefined);
       setIsModalOpen(true);
       navigate('/contracts', { replace: true });
       return;
@@ -189,6 +195,7 @@ const Contracts: React.FC = () => {
       if (contract) {
         setEditingContract(contract);
         setDefaultUnitId(undefined);
+        setDefaultTenantId(undefined);
         setIsModalOpen(true);
       }
       navigate('/contracts', { replace: true });
@@ -198,12 +205,14 @@ const Contracts: React.FC = () => {
   const openCreate = () => {
     setEditingContract(null);
     setDefaultUnitId(undefined);
+    setDefaultTenantId(undefined);
     setIsModalOpen(true);
   };
 
   const openEdit = (contract: Contract) => {
     setEditingContract(contract);
     setDefaultUnitId(undefined);
+    setDefaultTenantId(undefined);
     setIsModalOpen(true);
   };
 
@@ -213,7 +222,25 @@ const Contracts: React.FC = () => {
       return;
     }
 
-    await dataService.remove('contracts', contractId);
+    setPendingDeleteId(contractId);
+  };
+
+  const confirmDelete = async () => {
+    if (!pendingDeleteId) return;
+
+    try {
+      setIsDeleting(true);
+      await dataService.remove('contracts', pendingDeleteId, { silent: true });
+      toast.success('تم حذف العقد.');
+      if (selectedContractId === pendingDeleteId) {
+        setSelectedContractId('');
+      }
+      setPendingDeleteId(null);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حذف العقد.');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
@@ -509,7 +536,13 @@ const Contracts: React.FC = () => {
         </div>
       )}
 
-      <ContractForm isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} contract={editingContract} defaultUnitId={defaultUnitId} />
+      <ContractForm
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        contract={editingContract}
+        defaultUnitId={defaultUnitId}
+        defaultTenantId={defaultTenantId}
+      />
 
       {printingContract && (
         <PrintPreviewModal
@@ -528,11 +561,31 @@ const Contracts: React.FC = () => {
           <ContractPrintable contract={printingContract} settings={db.settings} />
         </PrintPreviewModal>
       )}
+
+      <ConfirmDialog
+        isOpen={!!pendingDeleteId}
+        title="تأكيد حذف العقد"
+        message="سيتم حذف العقد نهائيًا إذا لم تكن هناك حركات مالية مرتبطة به."
+        confirmLabel="حذف العقد"
+        cancelLabel="إلغاء"
+        loading={isDeleting}
+        onConfirm={confirmDelete}
+        onCancel={() => {
+          if (isDeleting) return;
+          setPendingDeleteId(null);
+        }}
+      />
     </div>
   );
 };
 
-const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: Contract | null; defaultUnitId?: string }> = ({ isOpen, onClose, contract, defaultUnitId }) => {
+const ContractForm: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  contract: Contract | null;
+  defaultUnitId?: string;
+  defaultTenantId?: string;
+}> = ({ isOpen, onClose, contract, defaultUnitId, defaultTenantId }) => {
   const { db, dataService } = useApp();
   const [data, setData] = useState<Partial<Omit<Contract, 'id' | 'createdAt'>>>({});
 
@@ -540,6 +593,9 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
     () => db.units.filter((unit) => !db.contracts.some((item) => item.unitId === unit.id && item.status === 'ACTIVE' && item.id !== contract?.id)),
     [contract?.id, db.contracts, db.units]
   );
+  const hasAvailableUnits = availableUnits.length > 0 || !!contract;
+  const hasTenants = db.tenants.length > 0;
+  const selectedUnit = useMemo(() => db.units.find((unit) => unit.id === data.unitId) || null, [data.unitId, db.units]);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
@@ -554,7 +610,7 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
 
     setData({
       unitId: defaultUnitId || availableUnits[0]?.id || '',
-      tenantId: db.tenants[0]?.id || '',
+      tenantId: (defaultTenantId && db.tenants.some((tenant) => tenant.id === defaultTenantId) ? defaultTenantId : db.tenants[0]?.id) || '',
       rent: 0,
       dueDay: 1,
       start: today,
@@ -565,7 +621,7 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
       ownerAgreementValue: 10,
       notes: '',
     });
-  }, [availableUnits, contract, db.tenants, defaultUnitId, isOpen]);
+  }, [availableUnits, contract, db.tenants, defaultTenantId, defaultUnitId, isOpen]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -577,7 +633,24 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
 
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const start = event.target.value;
+    if (!start) {
+      setData((current) => ({
+        ...current,
+        start: '',
+        end: '',
+      }));
+      return;
+    }
+
     const nextEnd = new Date(start);
+    if (Number.isNaN(nextEnd.getTime())) {
+      setData((current) => ({
+        ...current,
+        start,
+      }));
+      return;
+    }
+
     nextEnd.setFullYear(nextEnd.getFullYear() + 1);
     setData((current) => ({
       ...current,
@@ -588,24 +661,54 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (!hasAvailableUnits) {
+      toast.error('لا توجد وحدات متاحة حاليًا لإنشاء عقد جديد.');
+      return;
+    }
+
+    if (!hasTenants) {
+      toast.error('لا يوجد مستأجرون مسجلون. أضف مستأجرًا أولًا ثم أنشئ العقد.');
+      return;
+    }
+
     if (!data.unitId || !data.tenantId || !data.start || !data.end) {
       toast.error('يرجى تعبئة الحقول الأساسية للعقد.');
       return;
     }
 
-    if (contract) await dataService.update('contracts', contract.id, data);
-    else await dataService.add('contracts', data);
+    if (new Date(data.end).getTime() <= new Date(data.start).getTime()) {
+      toast.error('يجب أن يكون تاريخ نهاية العقد بعد تاريخ البداية.');
+      return;
+    }
 
-    onClose();
+    try {
+      if (contract) await dataService.update('contracts', contract.id, data, { silent: true });
+      else await dataService.add('contracts', data, { silent: true });
+      toast.success(contract ? 'تم تحديث العقد بنجاح.' : 'تم تسجيل العقد بنجاح.');
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حفظ بيانات العقد.');
+    }
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={contract ? 'تعديل العقد' : 'إضافة عقد جديد'}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {!hasAvailableUnits && (
+          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            لا توجد وحدات شاغرة متاحة لإضافة عقد جديد الآن. قم بإنهاء عقد قائم أو أضف وحدة جديدة ثم أعد المحاولة.
+          </div>
+        )}
+        {!hasTenants && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
+            لا يمكن إنشاء عقد بدون مستأجر. أضف مستأجرًا أولًا من شاشة المستأجرين أو العملاء المحتملين.
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelCls}>الوحدة</label>
-            <select className={inputCls} name="unitId" value={data.unitId || ''} onChange={handleChange} required>
+            <select className={inputCls} name="unitId" value={data.unitId || ''} onChange={handleChange} required disabled={!hasAvailableUnits && !contract}>
+              {!contract && !availableUnits.length && <option value="">لا توجد وحدات متاحة</option>}
               {contract && !availableUnits.some((item) => item.id === contract.unitId) && (
                 <option value={contract.unitId}>
                   {db.units.find((item) => item.id === contract.unitId)?.name || 'الوحدة الحالية'}
@@ -617,10 +720,15 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
                 </option>
               ))}
             </select>
+            {selectedUnit && (
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                العقار: {fixMojibake(db.properties.find((property) => property.id === selectedUnit.propertyId)?.name || 'عقار غير محدد')}
+              </p>
+            )}
           </div>
           <div>
             <label className={labelCls}>المستأجر</label>
-            <select className={inputCls} name="tenantId" value={data.tenantId || ''} onChange={handleChange} required>
+            <select className={inputCls} name="tenantId" value={data.tenantId || ''} onChange={handleChange} required disabled={!hasTenants}>
               {!db.tenants.length && <option value="">لا يوجد مستأجرون مسجلون</option>}
               {db.tenants.map((tenant) => (
                 <option key={tenant.id} value={tenant.id}>
@@ -687,7 +795,7 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
           <button type="button" onClick={onClose} className={ghostButton}>
             إلغاء
           </button>
-          <button type="submit" className={primaryButton}>
+          <button type="submit" className={primaryButton} disabled={!hasAvailableUnits || !hasTenants}>
             حفظ العقد
           </button>
         </div>

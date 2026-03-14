@@ -8,6 +8,7 @@ import { dataService } from '../services/dataService';
 import { financeService } from '../services/financeService';
 import { fetchUserProfile, initGoogleClient, signIn, signOut } from '../services/googleAuth';
 import { loadFromDrive, syncToDrive } from '../services/driveSync';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 const emptySettings: Settings = {
   company: {
@@ -72,9 +73,9 @@ interface AppContextType {
     forcePasswordReset: (id: string) => Promise<any>;
   };
   dataService: {
-    add: (table: keyof Database, data: any) => Promise<any>;
-    update: (table: keyof Database, id: string, data: any) => Promise<void>;
-    remove: (table: keyof Database, id: string) => Promise<void>;
+    add: (table: keyof Database, data: any, options?: { silent?: boolean }) => Promise<any>;
+    update: (table: keyof Database, id: string, data: any, options?: { silent?: boolean }) => Promise<void>;
+    remove: (table: keyof Database, id: string, options?: { silent?: boolean }) => Promise<void>;
   };
   financeService: {
     addReceiptWithAllocations: (receipt: any, allocations: any) => Promise<void>;
@@ -282,6 +283,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [googleAccessToken, setGoogleAccessToken] = useState<string | null>(() => sessionStorage.getItem(GOOGLE_TOKEN_KEY));
 
   const refreshData = useCallback(async () => {
+    if (!isSupabaseConfigured) {
+      setDb({
+        ...emptyDb,
+        settings: hydrateSettings(emptySettings),
+        governance: emptyGovernance,
+        serials: DEFAULT_SERIALS as any,
+        auth: { users: [] },
+      });
+      setCurrentUser(null);
+      setIsReady(true);
+      return;
+    }
+
     try {
       const allData: any = {};
       const results = await Promise.all(
@@ -325,6 +339,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsReady(true);
     } catch (error) {
       console.error('Fatal: Could not load data from Supabase.', error);
+      setIsReady(true);
       toast.error('فشل تحميل بيانات التطبيق. يرجى المحاولة مرة أخرى.');
     }
   }, []);
@@ -650,9 +665,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       forcePasswordReset: (id) => authService.forcePasswordReset(id).finally(refreshData),
     },
     dataService: {
-      add: (table, data) => dataService.add(table, data, currentUser, db.settings).finally(refreshData),
-      update: (table, id, data) => dataService.update(table, id, data, currentUser).finally(refreshData),
-      remove: (table, id) => dataService.remove(table, id, currentUser).finally(refreshData),
+      add: (table, data, options) => dataService.add(table, data, currentUser, db.settings, options).finally(refreshData),
+      update: (table, id, data, options) => dataService.update(table, id, data, currentUser, options).finally(refreshData),
+      remove: (table, id, options) => dataService.remove(table, id, currentUser, options).finally(refreshData),
     },
     financeService: {
       addReceiptWithAllocations: (receipt, allocations) => financeService.addReceiptWithAllocations(receipt, allocations, currentUser, db.settings).finally(refreshData),
