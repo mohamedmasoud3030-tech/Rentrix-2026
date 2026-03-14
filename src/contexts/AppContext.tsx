@@ -10,7 +10,20 @@ import { fetchUserProfile, initGoogleClient, signIn, signOut } from '../services
 import { loadFromDrive, syncToDrive } from '../services/driveSync';
 
 const emptySettings: Settings = {
-  company: { name: '', address: '', phone: '', email: '', logo: '', contractAlertDays: 30 },
+  company: {
+    name: '',
+    address: '',
+    phone: '',
+    email: '',
+    logo: '',
+    appName: 'Rentrix ERP',
+    tagline: 'إدارة عقارية ومحاسبية مترابطة',
+    primaryColor: '#1780c2',
+    reportHeaderText: 'Rentrix ERP',
+    reportFooterText: 'تم الإنشاء بواسطة Rentrix ERP',
+    defaultTheme: 'light',
+    contractAlertDays: 30,
+  },
   taxRate: 0,
   currency: 'OMR',
   accountMappings: {

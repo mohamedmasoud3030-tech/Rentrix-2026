@@ -68,6 +68,7 @@ const voidReceipt = async (id: string, user: User | null | undefined): Promise<v
         toast.success('تم إلغاء السند وتحديث القيود المحاسبية.');
     } catch (e: any) {
         toast.error(e.message || "فشل إلغاء السند.");
+        throw e;
     }
 };
 
@@ -77,7 +78,10 @@ const voidExpense = async (id: string, user: User | null | undefined): Promise<v
         await supabase.from('expenses').update({ status: 'VOID', voided_at: Date.now() }).eq('id', id);
         await dataService.audit(user, 'VOID', 'expenses', id);
         toast.success('تم إلغاء المصروف.');
-    } catch (e: any) { toast.error(e.message || "فشل الإلغاء."); }
+    } catch (e: any) { 
+        toast.error(e.message || "فشل الإلغاء."); 
+        throw e;
+    }
 };
 
 const voidInvoice = async (id: string, user: User | null | undefined): Promise<void> => {
@@ -91,23 +95,39 @@ const voidInvoice = async (id: string, user: User | null | undefined): Promise<v
         await supabase.from('invoices').update({ status: 'VOID', voided_at: Date.now() }).eq('id', id);
         await dataService.audit(user, 'VOID', 'invoices', id);
         toast.success('تم إلغاء الفاتورة.');
-    } catch (e: any) { toast.error(e.message || "فشل إلغاء الفاتورة."); }
+    } catch (e: any) { 
+        toast.error(e.message || "فشل إلغاء الفاتورة."); 
+        throw e;
+    }
 };
 
-const addReceiptWithAllocations = async (receiptData: Omit<Receipt, 'id' | 'createdAt' | 'no' | 'status'>, allocations: { invoiceId: string, amount: number }[], user: User | null | undefined, settings: Settings): Promise<void> => {
+const addReceiptWithAllocations = async (
+    receiptData: Omit<Receipt, 'id' | 'createdAt' | 'no' | 'status'>,
+    allocations: { invoiceId: string; amount: number }[],
+    user: User | null | undefined,
+    settings: Settings
+): Promise<void> => {
+    let receiptId: string | null = null;
+    let receiptNo: string | null = null;
+    let serialBefore: number | null = null;
+    const revertedInvoices: Array<{ id: string; paid_amount: number; status: string }> = [];
+    const allocationIds: string[] = [];
+
     try {
         const { data: governance } = await supabase.from('governance').select('*').eq('id', STATIC_ID).single();
         const lockDate = governance?.financial_lock_date ? new Date(governance.financial_lock_date) : null;
-        const entryDate = new Date(receiptData.dateTime.slice(0,10));
+        const entryDate = new Date(receiptData.dateTime.slice(0, 10));
         if (lockDate && entryDate <= lockDate) {
             throw new Error(`الفترة المالية مغلقة حتى تاريخ ${lockDate.toLocaleDateString()}.`);
         }
         
         const { data: s } = await supabase.from('serials').select('receipt').eq('id', STATIC_ID).single();
-        const newReceiptNo = String((s?.receipt || 1000) + 1);
-        await supabase.from('serials').update({ receipt: Number(newReceiptNo) }).eq('id', STATIC_ID);
+        serialBefore = s?.receipt ?? 1000;
+        receiptNo = String(serialBefore + 1);
+        await supabase.from('serials').update({ receipt: Number(receiptNo) }).eq('id', STATIC_ID);
         
-        const newReceipt = { ...receiptData, id: crypto.randomUUID(), created_at: Date.now(), no: newReceiptNo, status: 'POSTED' };
+        receiptId = crypto.randomUUID();
+        const newReceipt = { ...receiptData, id: receiptId, created_at: Date.now(), no: receiptNo, status: 'POSTED' };
         
         const payload = {
             id: newReceipt.id,
@@ -122,29 +142,55 @@ const addReceiptWithAllocations = async (receiptData: Omit<Receipt, 'id' | 'crea
             created_at: newReceipt.created_at
         };
         
-        await supabase.from('receipts').insert(payload);
+        const { error: receiptError } = await supabase.from('receipts').insert(payload);
+        if (receiptError) throw receiptError;
         
-        const newAllocations = allocations.map(a => ({ id: crypto.randomUUID(), receipt_id: newReceipt.id, invoice_id: a.invoiceId, amount: a.amount, created_at: Date.now() }));
+        const newAllocations = allocations.map(a => {
+            const id = crypto.randomUUID();
+            allocationIds.push(id);
+            return { id, receipt_id: newReceipt.id, invoice_id: a.invoiceId, amount: a.amount, created_at: Date.now() };
+        });
         if (newAllocations.length > 0) {
-            await supabase.from('receipt_allocations').insert(newAllocations);
+            const { error: allocErr } = await supabase.from('receipt_allocations').insert(newAllocations);
+            if (allocErr) throw allocErr;
         }
         
         for (const a of allocations) {
             const { data: invoice } = await supabase.from('invoices').select('*').eq('id', a.invoiceId).single();
             if (invoice) {
+                revertedInvoices.push({ id: invoice.id, paid_amount: invoice.paid_amount, status: invoice.status });
                 const newPaidAmount = invoice.paid_amount + a.amount;
                 const newStatus = (newPaidAmount >= (invoice.amount + (invoice.tax_amount || 0)) - 0.001) ? 'PAID' : 'PARTIALLY_PAID';
-                await supabase.from('invoices').update({ paid_amount: newPaidAmount, status: newStatus }).eq('id', invoice.id);
+                const { error: invErr } = await supabase.from('invoices').update({ paid_amount: newPaidAmount, status: newStatus }).eq('id', invoice.id);
+                if (invErr) throw invErr;
             }
         }
         
         const mappings = settings.accountMappings;
         await postJournalEntrySupabase({ dr: mappings.paymentMethods[newReceipt.channel], cr: mappings.accountsReceivable, amount: newReceipt.amount, ref: newReceipt.id, entityType: 'CONTRACT', entityId: newReceipt.contractId, date: newReceipt.dateTime });
-        await dataService.audit(user, 'CREATE', 'receipts', newReceipt.id, `إصدار سند قبض رقم ${newReceiptNo}`);
+        await dataService.audit(user, 'CREATE', 'receipts', newReceipt.id, `إصدار سند قبض رقم ${receiptNo}`);
         
         toast.success('تم تسجيل السند بنجاح.');
     } catch (e: any) {
+        // Best-effort rollback to reduce partial writes
+        try {
+            if (allocationIds.length) {
+                await supabase.from('receipt_allocations').delete().in('id', allocationIds);
+            }
+            if (receiptId) {
+                await supabase.from('receipts').delete().eq('id', receiptId);
+            }
+            if (serialBefore !== null) {
+                await supabase.from('serials').update({ receipt: serialBefore }).eq('id', STATIC_ID);
+            }
+            for (const prev of revertedInvoices) {
+                await supabase.from('invoices').update({ paid_amount: prev.paid_amount, status: prev.status }).eq('id', prev.id);
+            }
+        } catch (cleanupError) {
+            console.error('Cleanup after receipt failure failed', cleanupError);
+        }
         toast.error(e.message || "فشل تسجيل السند.");
+        throw e;
     }
 };
 
@@ -154,32 +200,49 @@ export const financeService = {
     voidExpense,
     voidInvoice,
     voidDepositTx: async (id: string, user: User | null | undefined) => {
-        await createReversingJE(id);
-        await supabase.from('deposit_txs').update({ status: 'VOID' }).eq('id', id);
-        toast.success("تم إلغاء حركة التأمين.");
+        try {
+            await createReversingJE(id);
+            const { error } = await supabase.from('deposit_txs').update({ status: 'VOID' }).eq('id', id);
+            if (error) throw error;
+            toast.success("تم إلغاء حركة التأمين.");
+        } catch (e: any) {
+            toast.error(e.message || 'فشل إلغاء حركة التأمين.');
+            throw e;
+        }
     },
     voidOwnerSettlement: async (id: string, user: User | null | undefined) => {
-        await createReversingJE(id);
-        await supabase.from('owner_settlements').update({ status: 'VOID' }).eq('id', id);
-        toast.success("تم إلغاء تسوية المالك.");
+        try {
+            await createReversingJE(id);
+            const { error } = await supabase.from('owner_settlements').update({ status: 'VOID' }).eq('id', id);
+            if (error) throw error;
+            toast.success("تم إلغاء تسوية المالك.");
+        } catch (e: any) {
+            toast.error(e.message || 'فشل إلغاء تسوية المالك.');
+            throw e;
+        }
     },
     generateMonthlyInvoices: async (user: User | null | undefined, settings: Settings): Promise<number> => {
-        const today = new Date();
-        const currentMonthYm = today.toISOString().slice(0, 7);
-        const { data: activeContracts } = await supabase.from('contracts').select('*').eq('status', 'ACTIVE');
-        let count = 0;
-        if (activeContracts) {
-            for (const c of activeContracts) {
-                const dueDate = `${currentMonthYm}-${String(c.due_day).padStart(2, '0')}`;
-                const { data: exists } = await supabase.from('invoices').select('id').eq('contract_id', c.id).eq('due_date', dueDate).single();
-                if (!exists) {
-                    const tax = (c.rent * settings.taxRate) / 100;
-                    await dataService.add('invoices', { contractId: c.id, dueDate, amount: c.rent, taxAmount: tax, paidAmount: 0, status: 'UNPAID', type: 'RENT', notes: `إيجار شهر ${today.getMonth() + 1}` }, user, settings);
-                    count++;
+        try {
+            const today = new Date();
+            const currentMonthYm = today.toISOString().slice(0, 7);
+            const { data: activeContracts } = await supabase.from('contracts').select('*').eq('status', 'ACTIVE');
+            let count = 0;
+            if (activeContracts) {
+                for (const c of activeContracts) {
+                    const dueDate = `${currentMonthYm}-${String(c.due_day).padStart(2, '0')}`;
+                    const { data: exists } = await supabase.from('invoices').select('id').eq('contract_id', c.id).eq('due_date', dueDate).single();
+                    if (!exists) {
+                        const tax = (c.rent * settings.taxRate) / 100;
+                        await dataService.add('invoices', { contractId: c.id, dueDate, amount: c.rent, taxAmount: tax, paidAmount: 0, status: 'UNPAID', type: 'RENT', notes: `إيجار شهر ${today.getMonth() + 1}` }, user, settings);
+                        count++;
+                    }
                 }
             }
+            return count;
+        } catch (e: any) {
+            toast.error(e.message || 'فشل إصدار الفواتير الشهرية.');
+            throw e;
         }
-        return count;
     },
     // ─── generateNotifications ───────────────────────────────────────────────
     // Scans active contracts for two triggers:
@@ -195,7 +258,6 @@ export const financeService = {
             const todayStr = today.toISOString().slice(0, 10);
             const cutoffStr = alertCutoff.toISOString().slice(0, 10);
 
-            // Fetch what we need
             const [
                 { data: contracts },
                 { data: tenants },
@@ -216,12 +278,10 @@ export const financeService = {
             const tenantMap = new Map<string, any>((tenants || []).map((t: any) => [t.id, t]));
             const contractMap = new Map<string, any>((contracts || []).map((c: any) => [c.id, c]));
 
-            // Build set of already-pending recipient+type keys to avoid duplicates
             const pendingKeys = new Set((existing || []).map((n: any) => n.recipient));
 
             const toInsert: any[] = [];
 
-            // Trigger 1: overdue invoices
             for (const inv of invoices || []) {
                 const contract = contractMap.get(inv.contract_id);
                 if (!contract) continue;
@@ -241,7 +301,6 @@ export const financeService = {
                 });
             }
 
-            // Trigger 2: contracts expiring soon
             for (const c of contracts || []) {
                 if (!c.end_date) continue;
                 if (c.end_date > cutoffStr || c.end_date < todayStr) continue;
@@ -268,7 +327,7 @@ export const financeService = {
             return toInsert.length;
         } catch (e: any) {
             toast.error(e.message || 'فشل توليد الإشعارات.');
-            return 0;
+            throw e;
         }
     },
 
@@ -296,7 +355,6 @@ export const financeService = {
                 .eq('id', id);
             if (error) throw error;
 
-            // Post journal entry if account mappings are available
             if (settings?.accountMappings) {
                 const m = settings.accountMappings;
                 const cashAcc = m.paymentMethods?.CASH;
@@ -319,6 +377,7 @@ export const financeService = {
             toast.success('تم صرف العمولة وتسجيل القيد المحاسبي.');
         } catch (e: any) {
             toast.error(e.message || 'فشل صرف العمولة.');
+            throw e;
         }
     },
 
@@ -354,7 +413,6 @@ export const financeService = {
                 throw new Error('القيد غير متوازن — مجموع المدين لا يساوي مجموع الدائن.');
             }
 
-            // Get and increment serial
             const { data: s } = await supabase
                 .from('serials')
                 .select('journal_entry')
@@ -409,6 +467,7 @@ export const financeService = {
             toast.success('تم ترحيل القيد اليومي بنجاح.');
         } catch (e: any) {
             toast.error(e.message || 'فشل ترحيل القيد.');
+            throw e;
         }
     },
 };

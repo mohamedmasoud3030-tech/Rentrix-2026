@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
@@ -21,6 +21,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { ReceiptPrintable } from '../components/print/ReceiptPrintable';
 import { ExpensePrintable } from '../components/print/ExpensePrintable';
 import { exportReceiptToPdf, exportExpenseToPdf } from '../services/pdfService';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 
 const inputCls =
@@ -40,7 +41,25 @@ const Financials: React.FC = () => {
     const navigate = useNavigate();
     const { db, ownerBalances, contractBalances } = useApp();
     const [activeTab, setActiveTab] = useState<'receipts' | 'expenses' | 'deposits' | 'settlements'>('receipts');
+    const [confirmState, setConfirmState] = useState<{ open: boolean; message: string; action?: () => Promise<void>; busy?: boolean }>({ open: false, message: '' });
     const currency = db.settings?.currency || 'OMR';
+    const requestConfirm = (message: string, action: () => Promise<void>) => {
+        setConfirmState({ open: true, message, action, busy: false });
+    };
+    const runConfirm = async () => {
+        if (!confirmState.action) {
+            setConfirmState({ open: false, message: '', action: undefined, busy: false });
+            return;
+        }
+        try {
+            setConfirmState((prev) => ({ ...prev, busy: true }));
+            await confirmState.action();
+        } catch (error: any) {
+            toast.error(error?.message || 'فشل تنفيذ الإجراء.');
+        } finally {
+            setConfirmState({ open: false, message: '', action: undefined, busy: false });
+        }
+    };
     const officeWorkspace = useMemo(() => {
         const overdueInvoices = db.invoices.filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now());
         const openMaintenance = db.maintenanceRecords.filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status));
@@ -67,8 +86,8 @@ const Financials: React.FC = () => {
                     const unit = contract ? db.units.find((item) => item.id === contract.unitId) : null;
                     return {
                         ...invoice,
-                        tenantName: tenant?.name || tenant?.fullName || 'مستأجر غير محدد',
-                        unitName: unit?.name || unit?.unitNumber || 'وحدة غير محددة',
+                        tenantName: tenant?.name || tenant?.fullName || 'Ù…Ø³ØªØ£Ø¬Ø± ØºÙŠØ± Ù…Ø­Ø¯Ø¯',
+                        unitName: unit?.name || unit?.unitNumber || 'ÙˆØ­Ø¯Ø© ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©',
                     };
                 })
                 .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
@@ -76,7 +95,7 @@ const Financials: React.FC = () => {
             topOwnerBalances: Object.entries(ownerBalances || {})
                 .map(([ownerId, balance]: [string, any]) => ({
                     ownerId,
-                    ownerName: db.owners.find((owner) => owner.id === ownerId)?.name || 'مالك غير محدد',
+                    ownerName: db.owners.find((owner) => owner.id === ownerId)?.name || 'Ù…Ø§Ù„Ùƒ ØºÙŠØ± Ù…Ø­Ø¯Ø¯',
                     net: Number(balance?.net || 0),
                 }))
                 .filter((item) => item.net > 0)
@@ -88,9 +107,9 @@ const Financials: React.FC = () => {
                     const unit = record.unitId ? db.units.find((item) => item.id === record.unitId) : null;
                     return {
                         id: record.id,
-                        issueTitle: record.issueTitle || record.description || 'طلب صيانة',
-                        propertyName: property?.name || 'عقار غير محدد',
-                        unitName: unit?.name || unit?.unitNumber || 'وحدة غير محددة',
+                        issueTitle: record.issueTitle || record.description || 'Ø·Ù„Ø¨ ØµÙŠØ§Ù†Ø©',
+                        propertyName: property?.name || 'Ø¹Ù‚Ø§Ø± ØºÙŠØ± Ù…Ø­Ø¯Ø¯',
+                        unitName: unit?.name || unit?.unitNumber || 'ÙˆØ­Ø¯Ø© ØºÙŠØ± Ù…Ø­Ø¯Ø¯Ø©',
                     };
                 })
                 .slice(0, 4),
@@ -99,70 +118,70 @@ const Financials: React.FC = () => {
     
     return (
         <div className="app-page page-enter">
-            <PageHeader title="الخزينة والمالية" description="إدارة السندات، المصروفات، والتحويلات المالية للملاك والمستأجرين." />
+            <PageHeader title="Ø§Ù„Ø®Ø²ÙŠÙ†Ø© ÙˆØ§Ù„Ù…Ø§Ù„ÙŠØ©" description="Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ø³Ù†Ø¯Ø§ØªØŒ Ø§Ù„Ù…ØµØ±ÙˆÙØ§ØªØŒ ÙˆØ§Ù„ØªØ­ÙˆÙŠÙ„Ø§Øª Ø§Ù„Ù…Ø§Ù„ÙŠØ© Ù„Ù„Ù…Ù„Ø§Ùƒ ÙˆØ§Ù„Ù…Ø³ØªØ£Ø¬Ø±ÙŠÙ†." />
             <div className="flex flex-wrap gap-2">
                 <button type="button" onClick={() => setActiveTab('receipts')} className={quietActionCls}>
                     <ReceiptIcon size={15} />
-                    سندات القبض
+                    Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶
                 </button>
                 <button type="button" onClick={() => setActiveTab('expenses')} className={quietActionCls}>
                     <Wallet size={15} />
-                    المصروفات
+                    Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª
                 </button>
                 <button type="button" onClick={() => navigate('/invoices')} className={ghostButtonCls}>
                     <CreditCard size={15} />
-                    الفواتير
+                    Ø§Ù„ÙÙˆØ§ØªÙŠØ±
                 </button>
             </div>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
                 <Card className="p-5">
-                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المقبوضات</div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…Ù‚Ø¨ÙˆØ¶Ø§Øª</div>
                     <div className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">{formatCurrency(officeWorkspace.receiptsTotal, currency)}</div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.receiptsCount.toLocaleString('ar')} سند قبض مرحل</div>
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.receiptsCount.toLocaleString('ar')} Ø³Ù†Ø¯ Ù‚Ø¨Ø¶ Ù…Ø±Ø­Ù„</div>
                 </Card>
                 <Card className="p-5">
-                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">إجمالي المصروفات</div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª</div>
                     <div className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">{formatCurrency(officeWorkspace.expensesTotal, currency)}</div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.expensesCount.toLocaleString('ar')} مصروف مرحل</div>
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.expensesCount.toLocaleString('ar')} Ù…ØµØ±ÙˆÙ Ù…Ø±Ø­Ù„</div>
                 </Card>
                 <Card className="p-5">
-                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">مستحقات الملاك</div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ù…Ø³ØªØ­Ù‚Ø§Øª Ø§Ù„Ù…Ù„Ø§Ùƒ</div>
                     <div className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">{formatCurrency(officeWorkspace.ownerPayables, currency)}</div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.settlementsCount.toLocaleString('ar')} تسوية مالك مرحّلة</div>
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.settlementsCount.toLocaleString('ar')} ØªØ³ÙˆÙŠØ© Ù…Ø§Ù„Ùƒ Ù…Ø±Ø­Ù‘Ù„Ø©</div>
                 </Card>
                 <Card className="p-5">
-                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">متأخرات المستأجرين</div>
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ù…ØªØ£Ø®Ø±Ø§Øª Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±ÙŠÙ†</div>
                     <div className="mt-2 text-2xl font-extrabold text-slate-800 dark:text-slate-100">{formatCurrency(officeWorkspace.tenantReceivables, currency)}</div>
-                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.overdueInvoices.length.toLocaleString('ar')} فاتورة متأخرة</div>
+                    <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{officeWorkspace.overdueInvoices.length.toLocaleString('ar')} ÙØ§ØªÙˆØ±Ø© Ù…ØªØ£Ø®Ø±Ø©</div>
                 </Card>
             </div>
 
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.08fr_0.92fr]">
                 <Card className="p-4 sm:p-5">
-                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل المكتب</h3>
+                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">Ù…Ø³Ø§Ø­Ø© Ø¹Ù…Ù„ Ø§Ù„Ù…ÙƒØªØ¨</h3>
                     <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2">
                         <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الأداء المالي</div>
+                            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø§Ù„Ø£Ø¯Ø§Ø¡ Ø§Ù„Ù…Ø§Ù„ÙŠ</div>
                             <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                <div><strong>صافي التدفق:</strong> {formatCurrency(officeWorkspace.receiptsTotal - officeWorkspace.expensesTotal - officeWorkspace.settlementsTotal, currency)}</div>
-                                <div><strong>تحويلات الملاك:</strong> {formatCurrency(officeWorkspace.settlementsTotal, currency)}</div>
-                                <div><strong>العقود النشطة:</strong> {db.contracts.filter((item) => item.status === 'ACTIVE').length.toLocaleString('ar')}</div>
-                                <div><strong>الملاك:</strong> {db.owners.length.toLocaleString('ar')}</div>
+                                <div><strong>ØµØ§ÙÙŠ Ø§Ù„ØªØ¯ÙÙ‚:</strong> {formatCurrency(officeWorkspace.receiptsTotal - officeWorkspace.expensesTotal - officeWorkspace.settlementsTotal, currency)}</div>
+                                <div><strong>ØªØ­ÙˆÙŠÙ„Ø§Øª Ø§Ù„Ù…Ù„Ø§Ùƒ:</strong> {formatCurrency(officeWorkspace.settlementsTotal, currency)}</div>
+                                <div><strong>Ø§Ù„Ø¹Ù‚ÙˆØ¯ Ø§Ù„Ù†Ø´Ø·Ø©:</strong> {db.contracts.filter((item) => item.status === 'ACTIVE').length.toLocaleString('ar')}</div>
+                                <div><strong>Ø§Ù„Ù…Ù„Ø§Ùƒ:</strong> {db.owners.length.toLocaleString('ar')}</div>
                             </div>
                         </div>
                         <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">التشغيل والتنبيهات</div>
+                            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">Ø§Ù„ØªØ´ØºÙŠÙ„ ÙˆØ§Ù„ØªÙ†Ø¨ÙŠÙ‡Ø§Øª</div>
                             <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                <div><strong>فواتير متأخرة:</strong> {officeWorkspace.overdueInvoices.length.toLocaleString('ar')}</div>
-                                <div><strong>صيانة مفتوحة:</strong> {officeWorkspace.openMaintenance.length.toLocaleString('ar')}</div>
-                                <div><strong>سندات القبض:</strong> {officeWorkspace.receiptsCount.toLocaleString('ar')}</div>
-                                <div><strong>المصروفات:</strong> {officeWorkspace.expensesCount.toLocaleString('ar')}</div>
+                                <div><strong>ÙÙˆØ§ØªÙŠØ± Ù…ØªØ£Ø®Ø±Ø©:</strong> {officeWorkspace.overdueInvoices.length.toLocaleString('ar')}</div>
+                                <div><strong>ØµÙŠØ§Ù†Ø© Ù…ÙØªÙˆØ­Ø©:</strong> {officeWorkspace.openMaintenance.length.toLocaleString('ar')}</div>
+                                <div><strong>Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶:</strong> {officeWorkspace.receiptsCount.toLocaleString('ar')}</div>
+                                <div><strong>Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª:</strong> {officeWorkspace.expensesCount.toLocaleString('ar')}</div>
                             </div>
                         </div>
                     </div>
                     <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div className={infoPanelCls}>
-                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">فواتير تحتاج تحصيلًا الآن</div>
+                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">ÙÙˆØ§ØªÙŠØ± ØªØ­ØªØ§Ø¬ ØªØ­ØµÙŠÙ„Ù‹Ø§ Ø§Ù„Ø¢Ù†</div>
                             <div className="space-y-2">
                                 {officeWorkspace.topOverdueInvoices.map((invoice) => (
                                     <button
@@ -173,16 +192,16 @@ const Financials: React.FC = () => {
                                     >
                                         <span className="min-w-0">
                                             <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.tenantName}</span>
-                                            <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{invoice.unitName} â€¢ {formatDate(invoice.dueDate)}</span>
+                                            <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{invoice.unitName} Ã¢â‚¬Â¢ {formatDate(invoice.dueDate)}</span>
                                         </span>
                                         <span className="font-extrabold text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
                                     </button>
                                 ))}
-                                {!officeWorkspace.topOverdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير متأخرة حاليًا.</div>}
+                                {!officeWorkspace.topOverdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">Ù„Ø§ ØªÙˆØ¬Ø¯ ÙÙˆØ§ØªÙŠØ± Ù…ØªØ£Ø®Ø±Ø© Ø­Ø§Ù„ÙŠÙ‹Ø§.</div>}
                             </div>
                         </div>
                         <div className={infoPanelCls}>
-                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">مستحقات ملاك تحتاج تسوية</div>
+                            <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">Ù…Ø³ØªØ­Ù‚Ø§Øª Ù…Ù„Ø§Ùƒ ØªØ­ØªØ§Ø¬ ØªØ³ÙˆÙŠØ©</div>
                             <div className="space-y-2">
                                 {officeWorkspace.topOwnerBalances.map((owner) => (
                                     <button
@@ -195,12 +214,12 @@ const Financials: React.FC = () => {
                                         <span className="font-extrabold text-blue-600 dark:text-blue-300">{formatCurrency(owner.net, currency)}</span>
                                     </button>
                                 ))}
-                                {!officeWorkspace.topOwnerBalances.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد أرصدة موجبة تحتاج تحويلًا الآن.</div>}
+                                {!officeWorkspace.topOwnerBalances.length && <div className="text-sm text-slate-500 dark:text-slate-400">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø£Ø±ØµØ¯Ø© Ù…ÙˆØ¬Ø¨Ø© ØªØ­ØªØ§Ø¬ ØªØ­ÙˆÙŠÙ„Ù‹Ø§ Ø§Ù„Ø¢Ù†.</div>}
                             </div>
                         </div>
                     </div>
                     <div className="mt-4 space-y-2">
-                        <div className="text-sm font-extrabold text-slate-700 dark:text-slate-200">سجلات تحتاج متابعة</div>
+                        <div className="text-sm font-extrabold text-slate-700 dark:text-slate-200">Ø³Ø¬Ù„Ø§Øª ØªØ­ØªØ§Ø¬ Ù…ØªØ§Ø¨Ø¹Ø©</div>
                         {officeWorkspace.maintenanceImpact.map((record) => (
                             <button
                                 type="button"
@@ -210,26 +229,26 @@ const Financials: React.FC = () => {
                             >
                                 <span className="min-w-0">
                                     <span className="block font-bold text-slate-800 dark:text-slate-100">{record.issueTitle}</span>
-                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{record.propertyName} â€¢ {record.unitName}</span>
+                                    <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{record.propertyName} Ã¢â‚¬Â¢ {record.unitName}</span>
                                 </span>
                                 <ArrowRightLeft size={15} className="text-slate-400" />
                             </button>
                         ))}
-                        {!officeWorkspace.maintenanceImpact.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد طلبات صيانة حرجة في الوقت الحالي.</div>}
+                        {!officeWorkspace.maintenanceImpact.length && <div className="text-sm text-slate-500 dark:text-slate-400">Ù„Ø§ ØªÙˆØ¬Ø¯ Ø·Ù„Ø¨Ø§Øª ØµÙŠØ§Ù†Ø© Ø­Ø±Ø¬Ø© ÙÙŠ Ø§Ù„ÙˆÙ‚Øª Ø§Ù„Ø­Ø§Ù„ÙŠ.</div>}
                     </div>
                 </Card>
 
                 <Card className="p-4 sm:p-5">
-                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">تنبيهات الإدارة المالية</h3>
+                    <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">ØªÙ†Ø¨ÙŠÙ‡Ø§Øª Ø§Ù„Ø¥Ø¯Ø§Ø±Ø© Ø§Ù„Ù…Ø§Ù„ÙŠØ©</h3>
                     <div className="mt-4 space-y-3">
                         <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-                            فواتير متأخرة: {officeWorkspace.overdueInvoices.length.toLocaleString('ar')}
+                            ÙÙˆØ§ØªÙŠØ± Ù…ØªØ£Ø®Ø±Ø©: {officeWorkspace.overdueInvoices.length.toLocaleString('ar')}
                         </div>
                         <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-                            طلبات صيانة مفتوحة تؤثر ماليًا: {officeWorkspace.openMaintenance.length.toLocaleString('ar')}
+                            Ø·Ù„Ø¨Ø§Øª ØµÙŠØ§Ù†Ø© Ù…ÙØªÙˆØ­Ø© ØªØ¤Ø«Ø± Ù…Ø§Ù„ÙŠÙ‹Ø§: {officeWorkspace.openMaintenance.length.toLocaleString('ar')}
                         </div>
                         <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
-                            التبويبات بالأسفل ما زالت تمثل مسارات التشغيل الفعلية لسندات القبض والمصروفات والودائع وتسويات الملاك.
+                            Ø§Ù„ØªØ¨ÙˆÙŠØ¨Ø§Øª Ø¨Ø§Ù„Ø£Ø³ÙÙ„ Ù…Ø§ Ø²Ø§Ù„Øª ØªÙ…Ø«Ù„ Ù…Ø³Ø§Ø±Ø§Øª Ø§Ù„ØªØ´ØºÙŠÙ„ Ø§Ù„ÙØ¹Ù„ÙŠØ© Ù„Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶ ÙˆØ§Ù„Ù…ØµØ±ÙˆÙØ§Øª ÙˆØ§Ù„ÙˆØ¯Ø§Ø¦Ø¹ ÙˆØªØ³ÙˆÙŠØ§Øª Ø§Ù„Ù…Ù„Ø§Ùƒ.
                         </div>
                     </div>
                 </Card>
@@ -238,10 +257,10 @@ const Financials: React.FC = () => {
             <Card>
                 <Tabs 
                     tabs={[
-                        { id: 'receipts', label: 'سندات القبض' },
-                        { id: 'expenses', label: 'المصروفات' },
-                        { id: 'deposits', label: 'الودائع والتأمين' },
-                        { id: 'settlements', label: 'تسويات الملاك' }
+                        { id: 'receipts', label: 'Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶' },
+                        { id: 'expenses', label: 'Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª' },
+                        { id: 'deposits', label: 'Ø§Ù„ÙˆØ¯Ø§Ø¦Ø¹ ÙˆØ§Ù„ØªØ£Ù…ÙŠÙ†' },
+                        { id: 'settlements', label: 'ØªØ³ÙˆÙŠØ§Øª Ø§Ù„Ù…Ù„Ø§Ùƒ' }
                     ]}
                     activeTab={activeTab}
                     onTabClick={(id) => setActiveTab(id as any)}
@@ -278,25 +297,25 @@ const ReceiptsView: React.FC = () => {
         <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className={sectionTitleCls}>سجلات القبض والتحصيل</h2>
-                    <p className="mt-1 text-sm text-slate-500">إدارة سندات القبض وربطها بالفواتير المستحقة وإرسالها للمستأجرين.</p>
+                    <h2 className={sectionTitleCls}>Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶ ÙˆØ§Ù„ØªØ­ØµÙŠÙ„</h2>
+                    <p className="mt-1 text-sm text-slate-500">Ø¥Ø¯Ø§Ø±Ø© Ø³Ù†Ø¯Ø§Øª Ø§Ù„Ù‚Ø¨Ø¶ ÙˆØ±Ø¨Ø·Ù‡Ø§ Ø¨Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ù…Ø³ØªØ­Ù‚Ø© ÙˆØ¥Ø±Ø³Ø§Ù„Ù‡Ø§ Ù„Ù„Ù…Ø³ØªØ£Ø¬Ø±ÙŠÙ†.</p>
                 </div>
                 <button onClick={() => setIsAddModalOpen(true)} className={primaryButtonCls}>
                     <ReceiptIcon size={16} />
-                    إضافة سند قبض
+                    Ø¥Ø¶Ø§ÙØ© Ø³Ù†Ø¯ Ù‚Ø¨Ø¶
                 </button>
             </div>
-            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث برقم السند أو اسم المستأجر..." />
+            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="Ø¨Ø­Ø« Ø¨Ø±Ù‚Ù… Ø§Ù„Ø³Ù†Ø¯ Ø£Ùˆ Ø§Ø³Ù… Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±..." />
             {filteredReceipts.length ? (
                 <TableWrapper>
                     <thead className={tableHeadCls}>
                         <tr>
-                            <Th>رقم السند</Th>
-                            <Th>التاريخ</Th>
-                            <Th>المستأجر</Th>
-                            <Th>المبلغ</Th>
-                            <Th>الحالة</Th>
-                            <Th className="text-left">إجراءات</Th>
+                            <Th>Ø±Ù‚Ù… Ø§Ù„Ø³Ù†Ø¯</Th>
+                            <Th>Ø§Ù„ØªØ§Ø±ÙŠØ®</Th>
+                            <Th>Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±</Th>
+                            <Th>Ø§Ù„Ù…Ø¨Ù„Øº</Th>
+                            <Th>Ø§Ù„Ø­Ø§Ù„Ø©</Th>
+                            <Th className="text-left">Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</Th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -307,16 +326,16 @@ const ReceiptsView: React.FC = () => {
                                 <Tr key={r.id} className={r.status === 'VOID' ? 'bg-slate-50/70 opacity-60 line-through' : ''}>
                                     <Td className="font-mono font-bold text-slate-800">{r.no}</Td>
                                     <Td className="whitespace-nowrap">{formatDateTime(r.dateTime)}</Td>
-                                    <Td>{tenant?.name || '—'}</Td>
+                                    <Td>{tenant?.name || 'â€”'}</Td>
                                     <Td className="font-bold text-emerald-600">{formatCurrency(r.amount, db.settings.currency)}</Td>
-                                    <Td><StatusPill status={r.status}>{r.status === 'POSTED' ? 'مرحّل' : 'ملغي'}</StatusPill></Td>
+                                    <Td><StatusPill status={r.status}>{r.status === 'POSTED' ? 'Ù…Ø±Ø­Ù‘Ù„' : 'Ù…Ù„ØºÙŠ'}</StatusPill></Td>
                                     <Td className="text-left">
                                         <div className="flex justify-end">
                                             <ActionsMenu items={[
                                                 EditAction(() => { setEditingReceipt(r); setIsEditModalOpen(true); }),
                                                 PrintAction(() => setPrintingReceipt(r)),
-                                                { label: 'إرسال واتساب', icon: <MessageCircle size={16} />, onClick: () => setWhatsAppContext({ recipient: tenant, type: 'receipt', data: { receipt: r } }) },
-                                                VoidAction(() => financeService.voidReceipt(r.id))
+                                                { label: 'Ø¥Ø±Ø³Ø§Ù„ ÙˆØ§ØªØ³Ø§Ø¨', icon: <MessageCircle size={16} />, onClick: () => setWhatsAppContext({ recipient: tenant, type: 'receipt', data: { receipt: r } }) },
+                                                VoidAction(() => requestConfirm('تأكيد إلغاء سند القبض؟', () => financeService.voidReceipt(r.id)))
                                             ]} />
                                         </div>
                                     </Td>
@@ -326,7 +345,7 @@ const ReceiptsView: React.FC = () => {
                     </tbody>
                 </TableWrapper>
             ) : (
-                <EmptyState icon={ReceiptIcon} title="لا توجد سندات قبض" description="ابدأ بإضافة أول سند قبض أو جرّب تعديل كلمات البحث." />
+                <EmptyState icon={ReceiptIcon} title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ø³Ù†Ø¯Ø§Øª Ù‚Ø¨Ø¶" description="Ø§Ø¨Ø¯Ø£ Ø¨Ø¥Ø¶Ø§ÙØ© Ø£ÙˆÙ„ Ø³Ù†Ø¯ Ù‚Ø¨Ø¶ Ø£Ùˆ Ø¬Ø±Ù‘Ø¨ ØªØ¹Ø¯ÙŠÙ„ ÙƒÙ„Ù…Ø§Øª Ø§Ù„Ø¨Ø­Ø«." />
             )}
             {isAddModalOpen && <ReceiptAllocationModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />}
             {isEditModalOpen && <EditReceiptForm isOpen={isEditModalOpen} onClose={() => { setIsEditModalOpen(false); setEditingReceipt(null); }} receipt={editingReceipt} />}
@@ -342,6 +361,13 @@ const ReceiptsView: React.FC = () => {
                 </PrintPreviewModal>
             )}
             {whatsAppContext && <WhatsAppComposerModal isOpen={!!whatsAppContext} onClose={() => setWhatsAppContext(null)} context={whatsAppContext} />}
+            <ConfirmDialog
+                isOpen={confirmState.open}
+                loading={confirmState.busy}
+                message={confirmState.message || 'ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø¥Ø¬Ø±Ø§Ø¡'}
+                onConfirm={runConfirm}
+                onCancel={() => setConfirmState({ open: false, message: '', action: undefined, busy: false })}
+            />
         </div>
     );
 };
@@ -362,25 +388,25 @@ const ExpensesView: React.FC = () => {
         <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className={sectionTitleCls}>سجلات المصروفات</h2>
-                    <p className="mt-1 text-sm text-slate-500">تتبع المصروفات التشغيلية وربطها بالحسابات المناسبة وسندات الصرف.</p>
+                    <h2 className={sectionTitleCls}>Ø³Ø¬Ù„Ø§Øª Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª</h2>
+                    <p className="mt-1 text-sm text-slate-500">ØªØªØ¨Ø¹ Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª Ø§Ù„ØªØ´ØºÙŠÙ„ÙŠØ© ÙˆØ±Ø¨Ø·Ù‡Ø§ Ø¨Ø§Ù„Ø­Ø³Ø§Ø¨Ø§Øª Ø§Ù„Ù…Ù†Ø§Ø³Ø¨Ø© ÙˆØ³Ù†Ø¯Ø§Øª Ø§Ù„ØµØ±Ù.</p>
                 </div>
                 <button onClick={() => setIsModalOpen(true)} className={primaryButtonCls}>
                     <Wallet size={16} />
-                    إضافة مصروف
+                    Ø¥Ø¶Ø§ÙØ© Ù…ØµØ±ÙˆÙ
                 </button>
             </div>
-            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث بالمصروف أو التصنيف..." />
+            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="Ø¨Ø­Ø« Ø¨Ø§Ù„Ù…ØµØ±ÙˆÙ Ø£Ùˆ Ø§Ù„ØªØµÙ†ÙŠÙ..." />
             {filteredExpenses.length ? (
                 <TableWrapper>
                     <thead className={tableHeadCls}>
                         <tr>
-                            <Th>رقم السند</Th>
-                            <Th>التاريخ</Th>
-                            <Th>التصنيف</Th>
-                            <Th>المبلغ</Th>
-                            <Th>الحالة</Th>
-                            <Th className="text-left">إجراءات</Th>
+                            <Th>Ø±Ù‚Ù… Ø§Ù„Ø³Ù†Ø¯</Th>
+                            <Th>Ø§Ù„ØªØ§Ø±ÙŠØ®</Th>
+                            <Th>Ø§Ù„ØªØµÙ†ÙŠÙ</Th>
+                            <Th>Ø§Ù„Ù…Ø¨Ù„Øº</Th>
+                            <Th>Ø§Ù„Ø­Ø§Ù„Ø©</Th>
+                            <Th className="text-left">Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</Th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -390,13 +416,13 @@ const ExpensesView: React.FC = () => {
                                 <Td className="whitespace-nowrap">{formatDateTime(e.dateTime)}</Td>
                                 <Td>{e.category}</Td>
                                 <Td className="font-bold text-rose-600">{formatCurrency(e.amount, db.settings.currency)}</Td>
-                                <Td><StatusPill status={e.status}>{e.status === 'POSTED' ? 'مرحّل' : 'ملغي'}</StatusPill></Td>
+                                <Td><StatusPill status={e.status}>{e.status === 'POSTED' ? 'Ù…Ø±Ø­Ù‘Ù„' : 'Ù…Ù„ØºÙŠ'}</StatusPill></Td>
                                 <Td className="text-left">
                                   <div className="flex justify-end">
                                     <ActionsMenu items={[
                                         EditAction(() => { setEditingExpense(e); setIsModalOpen(true); }),
                                         PrintAction(() => setPrintingExpense(e)),
-                                        VoidAction(() => financeService.voidExpense(e.id))
+                                        VoidAction(() => requestConfirm('تأكيد إلغاء المصروف؟', () => financeService.voidExpense(e.id)))
                                     ]} />
                                   </div>
                                 </Td>
@@ -405,7 +431,7 @@ const ExpensesView: React.FC = () => {
                     </tbody>
                 </TableWrapper>
             ) : (
-                <EmptyState icon={Wallet} title="لا توجد مصروفات" description="لم يتم تسجيل أي مصروفات بعد لهذه الفترة." />
+                <EmptyState icon={Wallet} title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ù…ØµØ±ÙˆÙØ§Øª" description="Ù„Ù… ÙŠØªÙ… ØªØ³Ø¬ÙŠÙ„ Ø£ÙŠ Ù…ØµØ±ÙˆÙØ§Øª Ø¨Ø¹Ø¯ Ù„Ù‡Ø°Ù‡ Ø§Ù„ÙØªØ±Ø©." />
             )}
             {isModalOpen && <ExpenseForm isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingExpense(null); }} expense={editingExpense} />}
             
@@ -413,7 +439,7 @@ const ExpensesView: React.FC = () => {
                 <PrintPreviewModal 
                     isOpen={!!printingExpense} 
                     onClose={() => setPrintingExpense(null)} 
-                    title="طباعة سند صرف" 
+                    title="Ø·Ø¨Ø§Ø¹Ø© Ø³Ù†Ø¯ ØµØ±Ù" 
                     onExportPdf={() => {
                         if (!db || !printingExpense) return;
                         exportExpenseToPdf(printingExpense, db.settings);
@@ -433,41 +459,41 @@ const DepositsView: React.FC = () => {
         <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className={sectionTitleCls}>إدارة مبالغ التأمين</h2>
-                    <p className="mt-1 text-sm text-slate-500">حركات الوديعة والخصومات والإرجاعات المرتبطة بالعقود والمستأجرين.</p>
+                    <h2 className={sectionTitleCls}>Ø¥Ø¯Ø§Ø±Ø© Ù…Ø¨Ø§Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ†</h2>
+                    <p className="mt-1 text-sm text-slate-500">Ø­Ø±ÙƒØ§Øª Ø§Ù„ÙˆØ¯ÙŠØ¹Ø© ÙˆØ§Ù„Ø®ØµÙˆÙ…Ø§Øª ÙˆØ§Ù„Ø¥Ø±Ø¬Ø§Ø¹Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ø¹Ù‚ÙˆØ¯ ÙˆØ§Ù„Ù…Ø³ØªØ£Ø¬Ø±ÙŠÙ†.</p>
                 </div>
                 <button onClick={() => setIsModalOpen(true)} className={primaryButtonCls}>
                     <PiggyBank size={16} />
-                    حركة وديعة جديدة
+                    Ø­Ø±ÙƒØ© ÙˆØ¯ÙŠØ¹Ø© Ø¬Ø¯ÙŠØ¯Ø©
                 </button>
             </div>
             {db.depositTxs.length ? (
                 <TableWrapper>
                     <thead className={tableHeadCls}>
                         <tr>
-                            <Th>التاريخ</Th>
-                            <Th>المستأجر</Th>
-                            <Th>النوع</Th>
-                            <Th>المبلغ</Th>
-                            <Th>الحالة</Th>
-                            <Th className="text-left">إجراءات</Th>
+                            <Th>Ø§Ù„ØªØ§Ø±ÙŠØ®</Th>
+                            <Th>Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±</Th>
+                            <Th>Ø§Ù„Ù†ÙˆØ¹</Th>
+                            <Th>Ø§Ù„Ù…Ø¨Ù„Øº</Th>
+                            <Th>Ø§Ù„Ø­Ø§Ù„Ø©</Th>
+                            <Th className="text-left">Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</Th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
                         {db.depositTxs.map(tx => {
                             const contract = db.contracts.find(c => c.id === tx.contractId);
                             const tenant = contract ? db.tenants.find(t => t.id === contract.tenantId) : null;
-                            const typeMap = {'DEPOSIT_IN': 'إيداع جديد', 'DEPOSIT_DEDUCT': 'خصم للإصلاح', 'DEPOSIT_RETURN': 'إرجاع مستحقات'};
+                            const typeMap = {'DEPOSIT_IN': 'Ø¥ÙŠØ¯Ø§Ø¹ Ø¬Ø¯ÙŠØ¯', 'DEPOSIT_DEDUCT': 'Ø®ØµÙ… Ù„Ù„Ø¥ØµÙ„Ø§Ø­', 'DEPOSIT_RETURN': 'Ø¥Ø±Ø¬Ø§Ø¹ Ù…Ø³ØªØ­Ù‚Ø§Øª'};
                             return (
                                 <Tr key={tx.id} className={tx.status === 'VOID' ? 'bg-slate-50/70 opacity-60 line-through' : ''}>
                                     <Td className="whitespace-nowrap">{formatDate(tx.date)}</Td>
-                                    <Td>{tenant?.name || '—'}</Td>
+                                    <Td>{tenant?.name || 'â€”'}</Td>
                                     <Td className="font-bold text-slate-800">{typeMap[tx.type]}</Td>
                                     <Td className="font-mono font-bold text-slate-800">{formatCurrency(tx.amount, db.settings.currency)}</Td>
-                                    <Td><StatusPill status={tx.status}>{tx.status === 'POSTED' ? 'مرحّل' : 'ملغي'}</StatusPill></Td>
+                                    <Td><StatusPill status={tx.status}>{tx.status === 'POSTED' ? 'Ù…Ø±Ø­Ù‘Ù„' : 'Ù…Ù„ØºÙŠ'}</StatusPill></Td>
                                     <Td className="text-left">
                                       <div className="flex justify-end">
-                                        {tx.status !== 'VOID' && <ActionsMenu items={[VoidAction(() => financeService.voidDepositTx(tx.id))]}/>}
+                                        {tx.status !== 'VOID' && <ActionsMenu items={[VoidAction(() => requestConfirm('تأكيد إلغاء حركة التأمين؟', () => financeService.voidDepositTx(tx.id)))]}/>}
                                       </div>
                                     </Td>
                                 </Tr>
@@ -476,7 +502,7 @@ const DepositsView: React.FC = () => {
                     </tbody>
                 </TableWrapper>
             ) : (
-                <EmptyState icon={PiggyBank} title="لا توجد حركات وديعة" description="أضف أول حركة لتتبع مبالغ التأمين والخصومات المرتبطة بالعقود." />
+                <EmptyState icon={PiggyBank} title="Ù„Ø§ ØªÙˆØ¬Ø¯ Ø­Ø±ÙƒØ§Øª ÙˆØ¯ÙŠØ¹Ø©" description="Ø£Ø¶Ù Ø£ÙˆÙ„ Ø­Ø±ÙƒØ© Ù„ØªØªØ¨Ø¹ Ù…Ø¨Ø§Ù„Øº Ø§Ù„ØªØ£Ù…ÙŠÙ† ÙˆØ§Ù„Ø®ØµÙˆÙ…Ø§Øª Ø§Ù„Ù…Ø±ØªØ¨Ø·Ø© Ø¨Ø§Ù„Ø¹Ù‚ÙˆØ¯." />
             )}
             {isModalOpen && <DepositTxForm isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />}
         </div>
@@ -498,25 +524,25 @@ const OwnerSettlementsView: React.FC = () => {
         <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                    <h2 className={sectionTitleCls}>تسويات وتحويلات الملاك</h2>
-                    <p className="mt-1 text-sm text-slate-500">تحويل صافي المستحقات للملاك مع تتبع الحالة والإثبات المحاسبي.</p>
+                    <h2 className={sectionTitleCls}>ØªØ³ÙˆÙŠØ§Øª ÙˆØªØ­ÙˆÙŠÙ„Ø§Øª Ø§Ù„Ù…Ù„Ø§Ùƒ</h2>
+                    <p className="mt-1 text-sm text-slate-500">ØªØ­ÙˆÙŠÙ„ ØµØ§ÙÙŠ Ø§Ù„Ù…Ø³ØªØ­Ù‚Ø§Øª Ù„Ù„Ù…Ù„Ø§Ùƒ Ù…Ø¹ ØªØªØ¨Ø¹ Ø§Ù„Ø­Ø§Ù„Ø© ÙˆØ§Ù„Ø¥Ø«Ø¨Ø§Øª Ø§Ù„Ù…Ø­Ø§Ø³Ø¨ÙŠ.</p>
                 </div>
                 <button onClick={() => setIsModalOpen(true)} className={primaryButtonCls}>
                     <Landmark size={16} />
-                    إضافة تحويل للمالك
+                    Ø¥Ø¶Ø§ÙØ© ØªØ­ÙˆÙŠÙ„ Ù„Ù„Ù…Ø§Ù„Ùƒ
                 </button>
             </div>
-            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث برقم التسوية أو اسم المالك..." />
+            <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="Ø¨Ø­Ø« Ø¨Ø±Ù‚Ù… Ø§Ù„ØªØ³ÙˆÙŠØ© Ø£Ùˆ Ø§Ø³Ù… Ø§Ù„Ù…Ø§Ù„Ùƒ..." />
             {filtered.length ? (
                 <TableWrapper>
                     <thead className={tableHeadCls}>
                         <tr>
-                            <Th>الرقم</Th>
-                            <Th>التاريخ</Th>
-                            <Th>المالك</Th>
-                            <Th>المبلغ المحول</Th>
-                            <Th>الحالة</Th>
-                            <Th className="text-left">إجراءات</Th>
+                            <Th>Ø§Ù„Ø±Ù‚Ù…</Th>
+                            <Th>Ø§Ù„ØªØ§Ø±ÙŠØ®</Th>
+                            <Th>Ø§Ù„Ù…Ø§Ù„Ùƒ</Th>
+                            <Th>Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø­ÙˆÙ„</Th>
+                            <Th>Ø§Ù„Ø­Ø§Ù„Ø©</Th>
+                            <Th className="text-left">Ø¥Ø¬Ø±Ø§Ø¡Ø§Øª</Th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -526,12 +552,12 @@ const OwnerSettlementsView: React.FC = () => {
                                 <Tr key={s.id} className={s.status === 'VOID' ? 'bg-slate-50/70 opacity-60 line-through' : ''}>
                                     <Td className="font-mono font-bold text-slate-800">{s.no}</Td>
                                     <Td className="whitespace-nowrap">{formatDate(s.date)}</Td>
-                                    <Td>{owner?.name || '—'}</Td>
+                                    <Td>{owner?.name || 'â€”'}</Td>
                                     <Td className="font-bold text-blue-600">{formatCurrency(s.amount, db.settings.currency)}</Td>
-                                    <Td><StatusPill status={s.status}>{s.status === 'POSTED' ? 'مرحّل' : 'ملغي'}</StatusPill></Td>
+                                    <Td><StatusPill status={s.status}>{s.status === 'POSTED' ? 'Ù…Ø±Ø­Ù‘Ù„' : 'Ù…Ù„ØºÙŠ'}</StatusPill></Td>
                                     <Td className="text-left">
                                       <div className="flex justify-end">
-                                        <ActionsMenu items={[ EditAction(() => { setEditingSettlement(s); setIsModalOpen(true); }), VoidAction(() => financeService.voidOwnerSettlement(s.id)) ]} />
+                                        <ActionsMenu items={[ EditAction(() => { setEditingSettlement(s); setIsModalOpen(true); }), VoidAction(() => requestConfirm('تأكيد إلغاء تسوية المالك؟', () => financeService.voidOwnerSettlement(s.id))) ]} />
                                       </div>
                                     </Td>
                                 </Tr>
@@ -540,7 +566,7 @@ const OwnerSettlementsView: React.FC = () => {
                     </tbody>
                 </TableWrapper>
             ) : (
-                <EmptyState icon={Landmark} title="لا توجد تسويات ملاك" description="عند تحويل المستحقات إلى المالك ستظهر هنا كل التسويات المالية." />
+                <EmptyState icon={Landmark} title="Ù„Ø§ ØªÙˆØ¬Ø¯ ØªØ³ÙˆÙŠØ§Øª Ù…Ù„Ø§Ùƒ" description="Ø¹Ù†Ø¯ ØªØ­ÙˆÙŠÙ„ Ø§Ù„Ù…Ø³ØªØ­Ù‚Ø§Øª Ø¥Ù„Ù‰ Ø§Ù„Ù…Ø§Ù„Ùƒ Ø³ØªØ¸Ù‡Ø± Ù‡Ù†Ø§ ÙƒÙ„ Ø§Ù„ØªØ³ÙˆÙŠØ§Øª Ø§Ù„Ù…Ø§Ù„ÙŠØ©." />
             )}
             {isModalOpen && <OwnerSettlementForm isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingSettlement(null); }} settlement={editingSettlement} />}
         </div>
@@ -573,19 +599,19 @@ const EditReceiptForm: React.FC<{ isOpen: boolean, onClose: () => void, receipt:
     const tenant = contract ? db.tenants.find(t => t.id === contract.tenantId) : null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={`تعديل سند قبض #${receipt.no}`}>
+        <Modal isOpen={isOpen} onClose={onClose} title={`ØªØ¹Ø¯ÙŠÙ„ Ø³Ù†Ø¯ Ù‚Ø¨Ø¶ #${receipt.no}`}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-sm"><strong>المستأجر:</strong> {tenant?.name}</p>
-                    <p className="text-sm"><strong>المبلغ:</strong> {formatCurrency(receipt.amount, db.settings.currency)}</p>
+                    <p className="text-sm"><strong>Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±:</strong> {tenant?.name}</p>
+                    <p className="text-sm"><strong>Ø§Ù„Ù…Ø¨Ù„Øº:</strong> {formatCurrency(receipt.amount, db.settings.currency)}</p>
                 </div>
-                <p className="rounded-xl bg-blue-50 p-3 text-center text-xs text-blue-700">لا يمكن تعديل المبلغ أو العقد لضمان سلامة القيود المحاسبية.</p>
+                <p className="rounded-xl bg-blue-50 p-3 text-center text-xs text-blue-700">Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…Ø¨Ù„Øº Ø£Ùˆ Ø§Ù„Ø¹Ù‚Ø¯ Ù„Ø¶Ù…Ø§Ù† Ø³Ù„Ø§Ù…Ø© Ø§Ù„Ù‚ÙŠÙˆØ¯ Ø§Ù„Ù…Ø­Ø§Ø³Ø¨ÙŠØ©.</p>
                 <div className="grid grid-cols-2 gap-4">
-                    <div><label className={labelCls}>التاريخ والوقت</label><input type="datetime-local" value={dateTime} onChange={e=>setDateTime(e.target.value)} required className={inputCls} /></div>
-                    <div><label className={labelCls}>مرجع / رقم الحوالة</label><input value={ref} onChange={e=>setRef(e.target.value)} className={inputCls} /></div>
+                    <div><label className={labelCls}>Ø§Ù„ØªØ§Ø±ÙŠØ® ÙˆØ§Ù„ÙˆÙ‚Øª</label><input type="datetime-local" value={dateTime} onChange={e=>setDateTime(e.target.value)} required className={inputCls} /></div>
+                    <div><label className={labelCls}>Ù…Ø±Ø¬Ø¹ / Ø±Ù‚Ù… Ø§Ù„Ø­ÙˆØ§Ù„Ø©</label><input value={ref} onChange={e=>setRef(e.target.value)} className={inputCls} /></div>
                 </div>
-                <div><label className={labelCls}>ملاحظات</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} className={inputCls} /></div>
-                <div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button><button type="submit" className={primaryButtonCls}>حفظ التعديلات</button></div>
+                <div><label className={labelCls}>Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} className={inputCls} /></div>
+                <div className="flex justify-end gap-2 pt-4 border-t"><button type="button" onClick={onClose} className={ghostButtonCls}>Ø¥Ù„ØºØ§Ø¡</button><button type="submit" className={primaryButtonCls}>Ø­ÙØ¸ Ø§Ù„ØªØ¹Ø¯ÙŠÙ„Ø§Øª</button></div>
             </form>
         </Modal>
     );
@@ -643,7 +669,7 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean, onClose: () => void }>
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (receiptData.amount <= 0 || !isBalanced) {
-            toast.error("يجب أن يساوي المبلغ المخصص إجمالي مبلغ السند.");
+            toast.error("ÙŠØ¬Ø¨ Ø£Ù† ÙŠØ³Ø§ÙˆÙŠ Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø®ØµØµ Ø¥Ø¬Ù…Ø§Ù„ÙŠ Ù…Ø¨Ù„Øº Ø§Ù„Ø³Ù†Ø¯.");
             return;
         }
         try {
@@ -652,44 +678,44 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean, onClose: () => void }>
             onClose();
         } catch (error) {
             console.error("Failed to add receipt with allocations:", error);
-            toast.error(error instanceof Error ? error.message : "فشل إضافة السند.");
+            toast.error(error instanceof Error ? error.message : "ÙØ´Ù„ Ø¥Ø¶Ø§ÙØ© Ø§Ù„Ø³Ù†Ø¯.");
         }
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="إضافة سند قبض وتخصيص الدفعات">
+        <Modal isOpen={isOpen} onClose={onClose} title="Ø¥Ø¶Ø§ÙØ© Ø³Ù†Ø¯ Ù‚Ø¨Ø¶ ÙˆØªØ®ØµÙŠØµ Ø§Ù„Ø¯ÙØ¹Ø§Øª">
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:grid-cols-3">
-                    <div><label className="text-xs font-bold block mb-1">العقد</label><select value={contractId} onChange={e => setContractId(e.target.value)} required><option value="">-- اختر العقد --</option>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name} - {db.units.find(u=>u.id===c.unitId)?.name}</option>)}</select></div>
-                    <div><label className="text-xs font-bold block mb-1">المبلغ المستلم</label><input type="number" value={receiptData.amount || ''} onChange={e=>setReceiptData({...receiptData, amount: Number(e.target.value)})} required /></div>
-                    <div><label className="text-xs font-bold block mb-1">الطريقة</label><select value={receiptData.channel} onChange={e=>setReceiptData({...receiptData, channel: e.target.value as any})}><option value="CASH">نقدي</option><option value="BANK">تحويل</option><option value="POS">شبكة</option></select></div>
-                    <div className="md:col-span-3"><label className="text-xs font-bold block mb-1">ملاحظات</label><textarea value={receiptData.notes} onChange={e=>setReceiptData({...receiptData, notes: e.target.value})} rows={1}/></div>
+                    <div><label className="text-xs font-bold block mb-1">Ø§Ù„Ø¹Ù‚Ø¯</label><select value={contractId} onChange={e => setContractId(e.target.value)} required><option value="">-- Ø§Ø®ØªØ± Ø§Ù„Ø¹Ù‚Ø¯ --</option>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name} - {db.units.find(u=>u.id===c.unitId)?.name}</option>)}</select></div>
+                    <div><label className="text-xs font-bold block mb-1">Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø³ØªÙ„Ù…</label><input type="number" value={receiptData.amount || ''} onChange={e=>setReceiptData({...receiptData, amount: Number(e.target.value)})} required /></div>
+                    <div><label className="text-xs font-bold block mb-1">Ø§Ù„Ø·Ø±ÙŠÙ‚Ø©</label><select value={receiptData.channel} onChange={e=>setReceiptData({...receiptData, channel: e.target.value as any})}><option value="CASH">Ù†Ù‚Ø¯ÙŠ</option><option value="BANK">ØªØ­ÙˆÙŠÙ„</option><option value="POS">Ø´Ø¨ÙƒØ©</option></select></div>
+                    <div className="md:col-span-3"><label className="text-xs font-bold block mb-1">Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label><textarea value={receiptData.notes} onChange={e=>setReceiptData({...receiptData, notes: e.target.value})} rows={1}/></div>
                 </div>
 
                 {contractId && (
                     <div className="space-y-2">
-                        <h3 className="border-b border-slate-100 pb-2 text-sm font-extrabold uppercase tracking-wider text-slate-700">تخصيص على الفواتير المستحقة</h3>
+                        <h3 className="border-b border-slate-100 pb-2 text-sm font-extrabold uppercase tracking-wider text-slate-700">ØªØ®ØµÙŠØµ Ø¹Ù„Ù‰ Ø§Ù„ÙÙˆØ§ØªÙŠØ± Ø§Ù„Ù…Ø³ØªØ­Ù‚Ø©</h3>
                         {unpaidInvoices.length > 0 ? (
                             <div className="max-h-60 overflow-y-auto rounded-xl border border-slate-200 bg-white">
                                 {unpaidInvoices.map(inv => (
                                     <div key={inv.id} className="grid grid-cols-4 items-center gap-4 border-b border-slate-100 p-3 last:border-b-0 hover:bg-slate-50/70 transition-colors">
                                         <div className="text-xs"><strong>#{inv.no}</strong><br/>{formatDate(inv.dueDate)}</div>
-                                        <div className="text-xs text-red-500">مستحق: {formatCurrency((inv.amount + (inv.taxAmount || 0)) - inv.paidAmount)}</div>
-                                        <div className="col-span-2"><input type="number" step="0.01" value={allocations.get(inv.id) || ''} onChange={e => handleAllocationChange(inv.id, e.target.value)} placeholder="المبلغ المخصص" className={`${inputCls} h-9 py-1.5`} /></div>
+                                        <div className="text-xs text-red-500">Ù…Ø³ØªØ­Ù‚: {formatCurrency((inv.amount + (inv.taxAmount || 0)) - inv.paidAmount)}</div>
+                                        <div className="col-span-2"><input type="number" step="0.01" value={allocations.get(inv.id) || ''} onChange={e => handleAllocationChange(inv.id, e.target.value)} placeholder="Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø®ØµØµ" className={`${inputCls} h-9 py-1.5`} /></div>
                                     </div>
                                 ))}
                             </div>
-                        ) : <p className="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">لا توجد فواتير مستحقة لهذا العقد حالياً.</p>}
+                        ) : <p className="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">Ù„Ø§ ØªÙˆØ¬Ø¯ ÙÙˆØ§ØªÙŠØ± Ù…Ø³ØªØ­Ù‚Ø© Ù„Ù‡Ø°Ø§ Ø§Ù„Ø¹Ù‚Ø¯ Ø­Ø§Ù„ÙŠØ§Ù‹.</p>}
                         
                         <div className={`grid grid-cols-3 gap-2 rounded-xl border p-3 text-xs font-bold ${isBalanced ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
-                            <div>الإجمالي: {formatCurrency(receiptData.amount)}</div>
-                            <div>المخصص: {formatCurrency(totalAllocated)}</div>
-                            <div>المتبقي: {formatCurrency(remainingToAllocate)}</div>
+                            <div>Ø§Ù„Ø¥Ø¬Ù…Ø§Ù„ÙŠ: {formatCurrency(receiptData.amount)}</div>
+                            <div>Ø§Ù„Ù…Ø®ØµØµ: {formatCurrency(totalAllocated)}</div>
+                            <div>Ø§Ù„Ù…ØªØ¨Ù‚ÙŠ: {formatCurrency(remainingToAllocate)}</div>
                         </div>
                     </div>
                 )}
 
-                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4"><button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button><button type="submit" className={`${primaryButtonCls} disabled:cursor-not-allowed disabled:opacity-50`} disabled={!isBalanced || receiptData.amount <= 0}>حفظ السند</button></div>
+                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4"><button type="button" onClick={onClose} className={ghostButtonCls}>Ø¥Ù„ØºØ§Ø¡</button><button type="submit" className={`${primaryButtonCls} disabled:cursor-not-allowed disabled:opacity-50`} disabled={!isBalanced || receiptData.amount <= 0}>Ø­ÙØ¸ Ø§Ù„Ø³Ù†Ø¯</button></div>
             </form>
         </Modal>
     );
@@ -698,7 +724,7 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean, onClose: () => void }>
 const ExpenseForm: React.FC<{ isOpen: boolean, onClose: () => void, expense: Expense | null }> = ({ isOpen, onClose, expense }) => {
     const { db, dataService, financeService } = useApp();
     const [contractId, setContractId] = useState<string | null>(null);
-    const [category, setCategory] = useState('صيانة');
+    const [category, setCategory] = useState('ØµÙŠØ§Ù†Ø©');
     const [amount, setAmount] = useState(0);
     const [chargedTo, setChargedTo] = useState<Expense['chargedTo']>('OWNER');
     const [dateTime, setDateTime] = useState(new Date().toISOString().slice(0, 16));
@@ -717,7 +743,7 @@ const ExpenseForm: React.FC<{ isOpen: boolean, onClose: () => void, expense: Exp
         e.preventDefault();
         const data = { contractId, dateTime, category, amount, status: 'POSTED' as const, chargedTo, ref: '', notes, payee };
         if (expense) {
-            toast.error("لا يمكن تعديل المصروفات المرحلة. يرجى الإلغاء وإعادة الإدخال.");
+            toast.error("Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„Ù…ØµØ±ÙˆÙØ§Øª Ø§Ù„Ù…Ø±Ø­Ù„Ø©. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø¥Ù„ØºØ§Ø¡ ÙˆØ¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¥Ø¯Ø®Ø§Ù„.");
             return;
         }
         financeService.addExpense(data);
@@ -725,18 +751,18 @@ const ExpenseForm: React.FC<{ isOpen: boolean, onClose: () => void, expense: Exp
     };
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'تعديل مصروف' : 'إضافة مصروف جديد'}>
+        <Modal isOpen={isOpen} onClose={onClose} title={expense ? 'ØªØ¹Ø¯ÙŠÙ„ Ù…ØµØ±ÙˆÙ' : 'Ø¥Ø¶Ø§ÙØ© Ù…ØµØ±ÙˆÙ Ø¬Ø¯ÙŠØ¯'}>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div><label className={labelCls}>التصنيف</label><input value={category} onChange={e=>setCategory(e.target.value)} required placeholder="مثال: صيانة، كهرباء، عمولة" className={inputCls} /></div>
-                    <div><label className={labelCls}>المبلغ</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required className={inputCls} /></div>
-                    <div><label className={labelCls}>يخصم من</label><select value={chargedTo} onChange={e=>setChargedTo(e.target.value as any)} className={inputCls}><option value="OWNER">حساب المالك</option><option value="OFFICE">حساب المكتب</option><option value="TENANT">حساب المستأجر</option></select></div>
-                    <div><label className={labelCls}>العقد المرتبط (اختياري)</label><select value={contractId || ''} onChange={e=>setContractId(e.target.value || null)} className={inputCls}><option value="">-- مصروف مكتب عام --</option>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name}</option>)}</select></div>
-                    <div><label className={labelCls}>تاريخ المصروف</label><input type="datetime-local" value={dateTime} onChange={e=>setDateTime(e.target.value)} required className={inputCls} /></div>
-                    <div><label className={labelCls}>المستلم / الجهة</label><input value={payee} onChange={e=>setPayee(e.target.value)} placeholder="اسم الفني أو الشركة" className={inputCls} /></div>
+                    <div><label className={labelCls}>Ø§Ù„ØªØµÙ†ÙŠÙ</label><input value={category} onChange={e=>setCategory(e.target.value)} required placeholder="Ù…Ø«Ø§Ù„: ØµÙŠØ§Ù†Ø©ØŒ ÙƒÙ‡Ø±Ø¨Ø§Ø¡ØŒ Ø¹Ù…ÙˆÙ„Ø©" className={inputCls} /></div>
+                    <div><label className={labelCls}>Ø§Ù„Ù…Ø¨Ù„Øº</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required className={inputCls} /></div>
+                    <div><label className={labelCls}>ÙŠØ®ØµÙ… Ù…Ù†</label><select value={chargedTo} onChange={e=>setChargedTo(e.target.value as any)} className={inputCls}><option value="OWNER">Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ø§Ù„Ùƒ</option><option value="OFFICE">Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…ÙƒØªØ¨</option><option value="TENANT">Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±</option></select></div>
+                    <div><label className={labelCls}>Ø§Ù„Ø¹Ù‚Ø¯ Ø§Ù„Ù…Ø±ØªØ¨Ø· (Ø§Ø®ØªÙŠØ§Ø±ÙŠ)</label><select value={contractId || ''} onChange={e=>setContractId(e.target.value || null)} className={inputCls}><option value="">-- Ù…ØµØ±ÙˆÙ Ù…ÙƒØªØ¨ Ø¹Ø§Ù… --</option>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name}</option>)}</select></div>
+                    <div><label className={labelCls}>ØªØ§Ø±ÙŠØ® Ø§Ù„Ù…ØµØ±ÙˆÙ</label><input type="datetime-local" value={dateTime} onChange={e=>setDateTime(e.target.value)} required className={inputCls} /></div>
+                    <div><label className={labelCls}>Ø§Ù„Ù…Ø³ØªÙ„Ù… / Ø§Ù„Ø¬Ù‡Ø©</label><input value={payee} onChange={e=>setPayee(e.target.value)} placeholder="Ø§Ø³Ù… Ø§Ù„ÙÙ†ÙŠ Ø£Ùˆ Ø§Ù„Ø´Ø±ÙƒØ©" className={inputCls} /></div>
                 </div>
-                <div><label className={labelCls}>ملاحظات إضافية</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} className={inputCls} /></div>
-                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4"><button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button><button type="submit" className={primaryButtonCls}>حفظ وتسجيل المصروف</button></div>
+                <div><label className={labelCls}>Ù…Ù„Ø§Ø­Ø¸Ø§Øª Ø¥Ø¶Ø§ÙÙŠØ©</label><textarea value={notes} onChange={e=>setNotes(e.target.value)} rows={2} className={inputCls} /></div>
+                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4"><button type="button" onClick={onClose} className={ghostButtonCls}>Ø¥Ù„ØºØ§Ø¡</button><button type="submit" className={primaryButtonCls}>Ø­ÙØ¸ ÙˆØªØ³Ø¬ÙŠÙ„ Ø§Ù„Ù…ØµØ±ÙˆÙ</button></div>
             </form>
         </Modal>
     );
@@ -755,13 +781,13 @@ const DepositTxForm: React.FC<{ isOpen: boolean, onClose: () => void }> = ({ isO
         onClose();
     };
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title="حركة مبلغ تأمين (وديعة)">
+        <Modal isOpen={isOpen} onClose={onClose} title="Ø­Ø±ÙƒØ© Ù…Ø¨Ù„Øº ØªØ£Ù…ÙŠÙ† (ÙˆØ¯ÙŠØ¹Ø©)">
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div><label className={labelCls}>العقد / المستأجر</label><select value={contractId} onChange={e=>setContractId(e.target.value)} required className={inputCls}>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name}</option>)}</select></div>
-                <div><label className={labelCls}>نوع الحركة</label><select value={type} onChange={e=>setType(e.target.value as any)} className={inputCls}><option value="DEPOSIT_IN">إيداع مبلغ تأمين جديد</option><option value="DEPOSIT_RETURN">إرجاع التأمين للمستأجر</option><option value="DEPOSIT_DEDUCT">خصم من التأمين للصيانة</option></select></div>
-                <div><label className={labelCls}>المبلغ</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required placeholder="0.000" className={inputCls} /></div>
-                <div><label className={labelCls}>السبب / ملاحظات</label><input value={note} onChange={e=>setNote(e.target.value)} placeholder="مثال: تأمين عقد جديد، خصم تلفيات صبغ" className={inputCls} /></div>
-                <button type="submit" className={`${primaryButtonCls} mt-4 w-full justify-center`}>تأكيد الحركة المالية</button>
+                <div><label className={labelCls}>Ø§Ù„Ø¹Ù‚Ø¯ / Ø§Ù„Ù…Ø³ØªØ£Ø¬Ø±</label><select value={contractId} onChange={e=>setContractId(e.target.value)} required className={inputCls}>{db.contracts.map(c=><option key={c.id} value={c.id}>{db.tenants.find(t=>t.id===c.tenantId)?.name}</option>)}</select></div>
+                <div><label className={labelCls}>Ù†ÙˆØ¹ Ø§Ù„Ø­Ø±ÙƒØ©</label><select value={type} onChange={e=>setType(e.target.value as any)} className={inputCls}><option value="DEPOSIT_IN">Ø¥ÙŠØ¯Ø§Ø¹ Ù…Ø¨Ù„Øº ØªØ£Ù…ÙŠÙ† Ø¬Ø¯ÙŠØ¯</option><option value="DEPOSIT_RETURN">Ø¥Ø±Ø¬Ø§Ø¹ Ø§Ù„ØªØ£Ù…ÙŠÙ† Ù„Ù„Ù…Ø³ØªØ£Ø¬Ø±</option><option value="DEPOSIT_DEDUCT">Ø®ØµÙ… Ù…Ù† Ø§Ù„ØªØ£Ù…ÙŠÙ† Ù„Ù„ØµÙŠØ§Ù†Ø©</option></select></div>
+                <div><label className={labelCls}>Ø§Ù„Ù…Ø¨Ù„Øº</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required placeholder="0.000" className={inputCls} /></div>
+                <div><label className={labelCls}>Ø§Ù„Ø³Ø¨Ø¨ / Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label><input value={note} onChange={e=>setNote(e.target.value)} placeholder="Ù…Ø«Ø§Ù„: ØªØ£Ù…ÙŠÙ† Ø¹Ù‚Ø¯ Ø¬Ø¯ÙŠØ¯ØŒ Ø®ØµÙ… ØªÙ„ÙÙŠØ§Øª ØµØ¨Øº" className={inputCls} /></div>
+                <button type="submit" className={`${primaryButtonCls} mt-4 w-full justify-center`}>ØªØ£ÙƒÙŠØ¯ Ø§Ù„Ø­Ø±ÙƒØ© Ø§Ù„Ù…Ø§Ù„ÙŠØ©</button>
             </form>
         </Modal>
     );
@@ -780,23 +806,24 @@ const OwnerSettlementForm: React.FC<{ isOpen: boolean, onClose: () => void, sett
         e.preventDefault();
         const data = { ownerId, amount, date, method: 'BANK' as const, ref: '', notes, status: 'POSTED' as const };
         if (settlement) {
-            toast.error("لا يمكن تعديل التحويلات المرحلة. يرجى الإلغاء وإعادة الإدخال.");
+            toast.error("Ù„Ø§ ÙŠÙ…ÙƒÙ† ØªØ¹Ø¯ÙŠÙ„ Ø§Ù„ØªØ­ÙˆÙŠÙ„Ø§Øª Ø§Ù„Ù…Ø±Ø­Ù„Ø©. ÙŠØ±Ø¬Ù‰ Ø§Ù„Ø¥Ù„ØºØ§Ø¡ ÙˆØ¥Ø¹Ø§Ø¯Ø© Ø§Ù„Ø¥Ø¯Ø®Ø§Ù„.");
             return;
         }
         financeService.addOwnerSettlement(data);
         onClose();
     };
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={settlement ? "تعديل تسوية المالك" : "تحويل رصيد للمالك"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={settlement ? "ØªØ¹Ø¯ÙŠÙ„ ØªØ³ÙˆÙŠØ© Ø§Ù„Ù…Ø§Ù„Ùƒ" : "ØªØ­ÙˆÙŠÙ„ Ø±ØµÙŠØ¯ Ù„Ù„Ù…Ø§Ù„Ùƒ"}>
             <form onSubmit={handleSubmit} className="space-y-4">
-                <div><label className={labelCls}>المالك</label><select value={ownerId} onChange={e=>setOwnerId(e.target.value)} required className={inputCls}>{db.owners.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
-                <div><label className={labelCls}>تاريخ التحويل</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} required className={inputCls} /></div>
-                <div><label className={labelCls}>المبلغ المحول</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required placeholder="المبلغ المودع في حساب المالك" className={inputCls} /></div>
-                <div><label className={labelCls}>البيان / ملاحظات</label><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="مثال: تحويل صافي إيرادات شهر مايو" className={inputCls} /></div>
-                <button type="submit" className={`${primaryButtonCls} mt-4 w-full justify-center`}>حفظ وإثبات التحويل</button>
+                <div><label className={labelCls}>Ø§Ù„Ù…Ø§Ù„Ùƒ</label><select value={ownerId} onChange={e=>setOwnerId(e.target.value)} required className={inputCls}>{db.owners.map(o=><option key={o.id} value={o.id}>{o.name}</option>)}</select></div>
+                <div><label className={labelCls}>ØªØ§Ø±ÙŠØ® Ø§Ù„ØªØ­ÙˆÙŠÙ„</label><input type="date" value={date} onChange={e=>setDate(e.target.value)} required className={inputCls} /></div>
+                <div><label className={labelCls}>Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…Ø­ÙˆÙ„</label><input type="number" value={amount || ''} onChange={e=>setAmount(Number(e.target.value))} required placeholder="Ø§Ù„Ù…Ø¨Ù„Øº Ø§Ù„Ù…ÙˆØ¯Ø¹ ÙÙŠ Ø­Ø³Ø§Ø¨ Ø§Ù„Ù…Ø§Ù„Ùƒ" className={inputCls} /></div>
+                <div><label className={labelCls}>Ø§Ù„Ø¨ÙŠØ§Ù† / Ù…Ù„Ø§Ø­Ø¸Ø§Øª</label><input value={notes} onChange={e=>setNotes(e.target.value)} placeholder="Ù…Ø«Ø§Ù„: ØªØ­ÙˆÙŠÙ„ ØµØ§ÙÙŠ Ø¥ÙŠØ±Ø§Ø¯Ø§Øª Ø´Ù‡Ø± Ù…Ø§ÙŠÙˆ" className={inputCls} /></div>
+                <button type="submit" className={`${primaryButtonCls} mt-4 w-full justify-center`}>Ø­ÙØ¸ ÙˆØ¥Ø«Ø¨Ø§Øª Ø§Ù„ØªØ­ÙˆÙŠÙ„</button>
             </form>
         </Modal>
     );
 };
 
 export default Financials;
+

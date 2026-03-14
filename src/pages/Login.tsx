@@ -1,14 +1,29 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowLeft, Lock, ShieldCheck, User } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
+import { useApp } from '../contexts/AppContext';
+import { applyBrandTheme, getStoredTheme, hexToRgba, resolveBrandingFromSettings } from '../utils/branding';
 
 const Login: React.FC = () => {
+  const { db } = useApp();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const brand = useMemo(() => resolveBrandingFromSettings(db.settings), [db.settings]);
+  const logoUrl = brand.logoUrl || db.settings?.company?.logoDataUrl || db.settings?.company?.logo || '';
+  const heroIconStyle = useMemo(
+    () => ({ background: `linear-gradient(135deg, ${hexToRgba(brand.primaryColor, 0.88)} 0%, ${brand.primaryColor} 58%, ${hexToRgba(brand.primaryColor, 0.72)} 100%)` }),
+    [brand.primaryColor],
+  );
+  const activeTheme = useMemo(() => getStoredTheme(brand.defaultTheme), [brand.defaultTheme]);
+
+  useEffect(() => {
+    applyBrandTheme(activeTheme, brand.primaryColor);
+    document.title = `تسجيل الدخول | ${brand.appName}`;
+  }, [activeTheme, brand.appName, brand.primaryColor]);
 
   const handleLogin = async (event: React.FormEvent) => {
     event.preventDefault();

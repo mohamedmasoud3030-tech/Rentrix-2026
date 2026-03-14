@@ -1,4 +1,4 @@
-
+﻿
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { MaintenanceRecord, Expense, Invoice } from '../types';
@@ -16,6 +16,7 @@ import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import AttachmentsManager from '../components/shared/AttachmentsManager';
 import { MaintenancePrintable } from '../components/print/MaintenancePrintable';
 import { exportMaintenanceRecordToPdf } from '../services/pdfService';
+import ConfirmDialog from '../components/shared/ConfirmDialog';
 
 // Use the shared TableWrapper to ensure a consistent table design across the app
 import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
@@ -47,6 +48,7 @@ const Maintenance: React.FC = () => {
     const [printingRecord, setPrintingRecord] = useState<MaintenanceRecord | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRecordId, setSelectedRecordId] = useState('');
+    const [confirmState, setConfirmState] = useState<{ open: boolean; targetId?: string; busy?: boolean }>({ open: false });
 
     const handleOpenModal = (record: MaintenanceRecord | null = null) => {
         setEditingRecord(record);
@@ -58,14 +60,27 @@ const Maintenance: React.FC = () => {
         setIsModalOpen(false);
     };
 
-    const handleDelete = (id: string) => {
+    const requestDelete = (id: string) => {
         if (!db) return;
         const record = db.maintenanceRecords.find(r => r.id === id);
         if (record?.expenseId || record?.invoiceId) {
-            toast.error("لا يمكن حذف طلب الصيانة هذا لأنه مرتبط بحركة مالية.");
+            toast.error('لا يمكن حذف طلب الصيانة لأنه مرتبط بحركة مالية.');
             return;
         }
-        dataService.remove('maintenanceRecords', id);
+        setConfirmState({ open: true, targetId: id, busy: false });
+    };
+
+    const handleDelete = async () => {
+        if (!confirmState.targetId) return;
+        try {
+            setConfirmState((prev) => ({ ...prev, busy: true }));
+            await dataService.remove('maintenanceRecords', confirmState.targetId);
+            toast.success('تم حذف طلب الصيانة.');
+        } catch (error: any) {
+            toast.error(error?.message || 'تعذر حذف طلب الصيانة.');
+        } finally {
+            setConfirmState({ open: false, targetId: undefined, busy: false });
+        }
     };
 
     const summaryData = useMemo(() => {
@@ -96,7 +111,7 @@ const Maintenance: React.FC = () => {
         return db.maintenanceRecords.filter(rec => {
             if (!normalizedSearch) return true;
             const unit = db.units.find(u => u.id === rec.unitId);
-            const haystack = [rec.no, rec.description, unit?.name, unit?.unitNumber]
+            const haystack = [rec.no, rec.issueTitle, rec.description, unit?.name, unit?.unitNumber]
                 .filter((value): value is string => Boolean(value))
                 .map((value) => value.toLowerCase())
                 .join(' ');
@@ -124,303 +139,173 @@ const Maintenance: React.FC = () => {
     }, [db.contracts, db.expenses, db.invoices, db.properties, db.tenants, db.units, selectedRecord]);
     
     const getStatusLabel = (status: MaintenanceRecord['status']) => {
-        const map: { [key in MaintenanceRecord['status']]: string } = { 'NEW': 'جديد', 'OPEN': 'مفتوح', 'IN_PROGRESS': 'قيد التنفيذ', 'COMPLETED': 'مكتمل', 'CLOSED': 'مغلق', 'CANCELLED': 'ملغي' };
+        const map: { [key in MaintenanceRecord['status']]: string } = {
+            NEW: 'جديد',
+            OPEN: 'مفتوح',
+            IN_PROGRESS: 'قيد التنفيذ',
+            COMPLETED: 'مكتمل',
+            CLOSED: 'مغلق',
+            CANCELLED: 'ملغي',
+        };
         return map[status] || status;
-    }
-    
-    if (!db.settings) return null;
-
-    return (
-        <div className="space-y-6">
-            <PageHeader title="الصيانة والمتابعات" description="مساحة عمل لمتابعة الأعطال والتكلفة والتحويل إلى مصروف أو فاتورة وربطها بالعقار والوحدة." />
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <SummaryStatCard label="طلبات مفتوحة" value={summaryData.open} icon={<Wrench size={24}/>} color={summaryData.open > 0 ? 'warning' : 'success'}/>
-                <SummaryStatCard label="طلبات متأخرة (> 7 أيام)" value={summaryData.aged} icon={<AlertTriangle size={24}/>} color={summaryData.aged > 0 ? 'danger' : 'success'}/>
-                <SummaryStatCard label="طلبات جديدة اليوم" value={summaryData.newToday} icon={<Clock size={24}/>} color="info"/>
-                <SummaryStatCard label="تكاليف غير مفوترة" value={formatCurrency(summaryData.unbilledCost)} icon={<DollarSign size={24}/>} color={summaryData.unbilledCost > 0 ? 'warning' : 'success'}/>
-            </div>
-            <Card>
-                <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-bold">طلبات الصيانة (مرتبة حسب الأولوية)</h2>
-                    <button onClick={() => handleOpenModal()} className={primaryButtonCls}>
-                        <PlusCircle size={16}/>
-                        إضافة طلب صيانة
-                    </button>
-                </div>
-                <SearchFilterBar value={searchTerm} onSearch={setSearchTerm} placeholder="بحث برقم الطلب، الوصف، أو اسم الوحدة..." />
-                
-                {/* Use TableWrapper for consistent styling and responsive design */}
-                {recordsWithDetails.length ? (
-                  <TableWrapper>
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <Th>#</Th>
-                        <Th>الوحدة</Th>
-                        <Th>تاريخ الطلب</Th>
-                        <Th>التكلفة</Th>
-                        <Th>الحالة</Th>
-                        <Th className="text-left">إجراء سريع</Th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100">
-                      {recordsWithDetails.map((rec) => {
-                        const unit = db.units.find((u) => u.id === rec.unitId);
-                        const property = unit ? db.properties.find((p) => p.id === unit.propertyId) : null;
-                        // Highlight aged requests slightly using amber tint
-                        const agingRowCls = rec.isAging ? 'bg-amber-50/50' : '';
-                        return (
-                          <Tr
-                            key={rec.id}
-                            className={`${agingRowCls} cursor-pointer group`}
-                            onClick={() => setSelectedRecordId(rec.id)}
-                          >
-                            <Td className="font-mono font-bold text-slate-800">{rec.no}</Td>
-                            <Td className="font-medium text-slate-800">
-                              <div>{displayUnitName(unit)}</div>
-                              <div className="text-xs text-slate-500">{property?.name}</div>
-                            </Td>
-                            <Td>{formatDate(rec.requestDate)}</Td>
-                            <Td>{formatCurrency(rec.cost)}</Td>
-                            <Td>
-                              <StatusPill status={rec.status}>{getStatusLabel(rec.status)}</StatusPill>
-                            </Td>
-                            <Td className="text-left">
-                              <div className="flex items-center justify-end gap-2">
-                                {rec.status === 'NEW' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      dataService.update('maintenanceRecords', rec.id, { status: 'IN_PROGRESS' });
-                                    }}
-                                    className={warningButtonCls}
-                                  >
-                                    بدء العمل
-                                  </button>
-                                )}
-                                {rec.status === 'COMPLETED' && rec.cost > 0 && !rec.expenseId && !rec.invoiceId && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleOpenModal(rec);
-                                    }}
-                                    className={primaryButtonCls}
-                                  >
-                                    إنشاء مصروف/فاتورة
-                                  </button>
-                                )}
-                                <div
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  <ActionsMenu
-                                    items={[
-                                      EditAction(() => handleOpenModal(rec)),
-                                      PrintAction(() => setPrintingRecord(rec)),
-                                      DeleteAction(() => handleDelete(rec.id)),
-                                    ]}
-                                  />
-                                </div>
-                              </div>
-                            </Td>
-                          </Tr>
-                        );
-                      })}
-                    </tbody>
-                  </TableWrapper>
-                ) : (
-                  <div className="text-center py-16">
-                    <Wrench size={52} className="mx-auto text-slate-400" />
-                    <h3 className="mt-4 text-xl font-semibold text-slate-800">لا توجد طلبات صيانة</h3>
-                  </div>
-                )}
-            </Card>
-
-            {selectedRecord && maintenanceWorkspace && (
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.05fr_0.95fr]">
-                    <Card className="p-6">
-                        <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div>
-                                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل طلب الصيانة</h3>
-                                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">متابعة الطلب المحدد وربطه بالعقار والوحدة والطرف المتحمل للتكلفة.</p>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                                <button onClick={() => handleOpenModal(selectedRecord)} className={ghostButtonCls}>
-                                    تعديل
-                                </button>
-                                <button onClick={() => setPrintingRecord(selectedRecord)} className={primaryButtonCls}>
-                                    طباعة
-                                </button>
-                            </div>
-                        </div>
-
-                        <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-                            <SummaryStatCard label="رقم الطلب" value={selectedRecord.no || '—'} icon={<Wrench size={18}/>} color="slate"/>
-                            <SummaryStatCard label="التكلفة" value={formatCurrency(selectedRecord.cost)} icon={<DollarSign size={18}/>} color="blue"/>
-                            <SummaryStatCard label="الحالة" value={getStatusLabel(selectedRecord.status)} icon={<Clock size={18}/>} color={['COMPLETED','CLOSED'].includes(selectedRecord.status) ? 'emerald' : 'amber'}/>
-                            <SummaryStatCard label="التحميل" value={getChargedToLabel(selectedRecord.chargedTo)} icon={<AlertTriangle size={18}/>} color="rose"/>
-                        </div>
-
-                        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الربط التشغيلي</div>
-                                <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                    <div><strong>العقار:</strong> {maintenanceWorkspace.property?.name || '—'}</div>
-                                    <div><strong>الوحدة:</strong> {displayUnitName(maintenanceWorkspace.unit)}</div>
-                                    <div><strong>المستأجر الحالي:</strong> {maintenanceWorkspace.tenant?.name || maintenanceWorkspace.tenant?.fullName || '—'}</div>
-                                    <div><strong>تاريخ الطلب:</strong> {formatDate(selectedRecord.requestDate)}</div>
-                                </div>
-                            </div>
-                            <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الأثر المالي</div>
-                                <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                                    <div><strong>مصروف مرتبط:</strong> {maintenanceWorkspace.expense?.no || 'لا يوجد'}</div>
-                                    <div><strong>فاتورة مرتبطة:</strong> {maintenanceWorkspace.invoice?.no || 'لا يوجد'}</div>
-                                    <div><strong>الطرف المتحمل:</strong> {getChargedToLabel(selectedRecord.chargedTo)}</div>
-                                    <div><strong>الوصف:</strong> {selectedRecord.description || '—'}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </Card>
-
-                    <div className="space-y-6">
-                        <Card className="p-6">
-                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">تنبيهات الصيانة</h3>
-                            <div className="mt-4 space-y-3">
-                                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
-                                    {selectedRecord.isAging ? 'هذا الطلب متأخر ويحتاج متابعة تشغيلية.' : 'الطلب ضمن الإطار التشغيلي الحالي.'}
-                                </div>
-                                <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
-                                    {selectedRecord.status === 'COMPLETED' && !selectedRecord.expenseId && !selectedRecord.invoiceId ? 'الطلب مكتمل ولم يُحوّل بعد إلى فاتورة أو مصروف.' : 'الربط المالي للحالة الحالية سليم.'}
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6">
-                            <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">المرفقات والطباعة</h3>
-                            <div className="mt-4">
-                                <AttachmentsManager entityType="MAINTENANCE" entityId={selectedRecord.id} />
-                            </div>
-                        </Card>
-                    </div>
-                </div>
-            )}
-
-            <MaintenanceForm isOpen={isModalOpen} onClose={handleCloseModal} record={editingRecord} />
-            {printingRecord && (
-                <PrintPreviewModal
-                    isOpen={!!printingRecord}
-                    onClose={() => setPrintingRecord(null)}
-                    title={`طباعة طلب صيانة #${printingRecord.no}`}
-                    onExportPdf={() => {
-                        if (!db.settings || !printingRecord) return;
-                        const unit = db.units.find(u => u.id === printingRecord.unitId);
-                        const property = unit ? db.properties.find(p => p.id === unit.propertyId) : undefined;
-                        exportMaintenanceRecordToPdf(printingRecord, unit, property, db.settings);
-                    }}
-                >
-                    <MaintenancePrintable record={printingRecord} />
-                </PrintPreviewModal>
-            )}
-        </div>
-    );
-};
-
-
-const MaintenanceForm: React.FC<{ isOpen: boolean, onClose: () => void, record: MaintenanceRecord | null }> = ({ isOpen, onClose, record }) => {
-    const { db, dataService } = useApp();
-    const [data, setData] = useState<Partial<MaintenanceRecord>>({});
-    const defaultChargedTo = db.settings?.maintenance?.defaultChargedTo || 'OWNER';
-
-    useEffect(() => {
-        if (!db.settings) return;
-        if (record) setData(record);
-        else setData({
-            unitId: db.units[0]?.id || '',
-            requestDate: new Date().toISOString().slice(0, 10),
-            description: '',
-            status: 'NEW',
-            cost: 0,
-            chargedTo: defaultChargedTo,
-        });
-    }, [record, isOpen, db, defaultChargedTo]);
-    
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        const { name, value } = e.target;
-        setData(prev => ({ ...prev, [name]: ['cost'].includes(name) ? parseFloat(value) : value }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!db.settings || !data.unitId || !data.description) { toast.error("الوحدة والوصف مطلوبان."); return; }
+        if (!db.settings || !data.unitId || !data.description) { toast.error('الوحدة والوصف مطلوبان.'); return; }
+
+        const unit = db.units.find(u => u.id === data.unitId);
+        const propertyId = unit?.propertyId || data.propertyId || '';
+        const issueTitle = (data.issueTitle || data.description || '').trim();
+        const cost = Number(data.cost || 0);
+        const status = data.status || 'NEW';
+        const chargedTo = data.chargedTo || defaultChargedTo;
+
+        if (!propertyId) { toast.error('يرجى اختيار وحدة مرتبطة بعقار.'); return; }
+        if (!issueTitle) { toast.error('عنوان المشكلة مطلوب.'); return; }
+
+        const shouldPostFinance = ['COMPLETED', 'CLOSED'].includes(status) && cost > 0 && !(record?.expenseId || record?.invoiceId);
+        let createdFinance: { type: 'invoice' | 'expense'; id: string } | null = null;
 
         try {
+            if (shouldPostFinance) {
+                const activeContract = db.contracts.find(c => c.unitId === data.unitId && c.status === 'ACTIVE');
+                if (chargedTo === 'TENANT') {
+                    if (!activeContract) { throw new Error('لا يمكن تحميل التكلفة على المستأجر لعدم وجود عقد نشط.'); }
+                    const newInvoice = await dataService.add('invoices', { contractId: activeContract.id, dueDate: new Date().toISOString().slice(0, 10), amount: cost, paidAmount: 0, status: 'UNPAID', type: 'MAINTENANCE', notes: `فاتورة صيانة: ${issueTitle}`.slice(0, 100) });
+                    createdFinance = { type: 'invoice', id: newInvoice.id };
+                } else {
+                    const newExpense = await dataService.add('expenses', { contractId: activeContract?.id || null, dateTime: new Date().toISOString(), category: 'صيانة', amount: cost, ref: `صيانة للوحدة ${unit?.name || unit?.unitNumber || ''}`.trim(), notes: issueTitle, chargedTo, status: 'POSTED' });
+                    createdFinance = { type: 'expense', id: newExpense.id };
+                }
+            }
+
             if (record) {
-                if ((record.expenseId || record.invoiceId) && (record.status !== data.status || record.cost !== data.cost || record.chargedTo !== data.chargedTo)) {
-                    toast.error("لا يمكن تعديل البيانات المالية لطلب مرتبط بحركة مالية. قم بإلغاء المصروف/الفاتورة أولاً.");
+                if ((record.expenseId || record.invoiceId) && (record.status !== status || record.cost !== cost || record.chargedTo !== chargedTo)) {
+                    toast.error('لا يمكن تعديل البيانات المالية لطلب مرتبط بحركة مالية. قم بإلغاء المصروف/الفاتورة أولاً.');
                     return;
                 }
-                const isNewlyCompleted = ['COMPLETED', 'CLOSED'].includes(data.status!) && !['COMPLETED', 'CLOSED'].includes(record.status) && data.cost! > 0;
-                let updates = { ...data };
 
-                if (isNewlyCompleted) {
-                    const activeContract = db.contracts.find(c => c.unitId === data.unitId && c.status === 'ACTIVE');
-                    if (data.chargedTo === 'TENANT') {
-                        if (!activeContract) { toast.error("لا يمكن تحميل التكلفة على المستأجر لعدم وجود عقد نشط."); return; }
-                        const newInvoice = await dataService.add('invoices', { contractId: activeContract.id, dueDate: new Date().toISOString().slice(0, 10), amount: data.cost!, paidAmount: 0, status: 'UNPAID', type: 'MAINTENANCE', notes: `فاتورة صيانة: ${data.description}`.slice(0, 100) });
-                        if (newInvoice) { updates.invoiceId = newInvoice.id; updates.completedAt = Date.now(); }
-                    } else { // OWNER or OFFICE
-                        const newExpense = await dataService.add('expenses', { contractId: activeContract?.id || null, dateTime: new Date().toISOString(), category: 'صيانة', amount: data.cost!, ref: `صيانة للوحدة ${db.units.find(u => u.id === data.unitId)?.name}`, notes: data.description, chargedTo: data.chargedTo, status: 'POSTED' });
-                        if (newExpense) { updates.expenseId = newExpense.id; updates.completedAt = Date.now(); }
-                    }
+                const updates: Partial<MaintenanceRecord> = {
+                    ...data,
+                    propertyId,
+                    issueTitle,
+                    cost,
+                    status,
+                    chargedTo,
+                    completedAt: ['COMPLETED', 'CLOSED'].includes(status) ? (record.completedAt || Date.now()) : null,
+                };
+
+                if (createdFinance) {
+                    if (createdFinance.type === 'invoice') updates.invoiceId = createdFinance.id;
+                    if (createdFinance.type === 'expense') updates.expenseId = createdFinance.id;
+                    updates.completedAt = Date.now();
                 }
-                dataService.update('maintenanceRecords', record.id, updates);
+
+                await dataService.update('maintenanceRecords', record.id, updates);
+                toast.success('تم تحديث طلب الصيانة.');
             } else {
-                dataService.add('maintenanceRecords', data as any);
+                const baseRecord: Partial<MaintenanceRecord> = {
+                    ...data,
+                    propertyId,
+                    issueTitle,
+                    cost,
+                    status,
+                    chargedTo,
+                    completedAt: ['COMPLETED', 'CLOSED'].includes(status) ? Date.now() : null,
+                };
+
+                if (createdFinance) {
+                    if (createdFinance.type === 'invoice') baseRecord.invoiceId = createdFinance.id;
+                    if (createdFinance.type === 'expense') baseRecord.expenseId = createdFinance.id;
+                }
+
+                await dataService.add('maintenanceRecords', baseRecord as any);
+                toast.success('تم إنشاء طلب الصيانة.');
             }
             onClose();
-        } catch (error) { toast.error(error instanceof Error ? error.message : "فشل حفظ طلب الصيانة."); }
+        } catch (error) {
+            if (createdFinance) {
+                try {
+                    if (createdFinance.type === 'invoice') await dataService.remove('invoices', createdFinance.id);
+                    if (createdFinance.type === 'expense') await dataService.remove('expenses', createdFinance.id);
+                } catch (cleanupError) {
+                    console.error('تعذر تنظيف الحركة المالية المرتبطة بطلب الصيانة:', cleanupError);
+                }
+            }
+            const message = error instanceof Error ? error.message : 'فشل حفظ طلب الصيانة.';
+            toast.error(message);
+        }
     };
     
     if (!db.settings) return null;
 
     return (
-        <Modal isOpen={isOpen} onClose={onClose} title={record ? "تعديل طلب صيانة" : "إضافة طلب صيانة"}>
+        <Modal isOpen={isOpen} onClose={onClose} title={record ? 'تعديل طلب صيانة' : 'إضافة طلب صيانة'}>
             <form onSubmit={handleSubmit} className="space-y-5">
-                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                         <label className={labelCls}>الوحدة</label>
                         <select className={inputCls} name="unitId" value={data.unitId} onChange={handleChange} required>
-                            {db.units.map(u => <option key={u.id} value={u.id}>{displayUnitName(u)} ({db.properties.find(p=>p.id === u.propertyId)?.name})</option>)}
+                            {db.units.map(u => (
+                                <option key={u.id} value={u.id}>
+                                    {displayUnitName(u)} ({db.properties.find(p => p.id === u.propertyId)?.name})
+                                </option>
+                            ))}
                         </select>
                     </div>
                     <div>
                         <label className={labelCls}>تاريخ الطلب</label>
                         <input className={inputCls} name="requestDate" type="date" value={data.requestDate} onChange={handleChange} required />
                     </div>
-                 </div>
-                 <div>
+                </div>
+
+                <div>
+                    <label className={labelCls}>عنوان المشكلة</label>
+                    <input className={inputCls} name="issueTitle" value={data.issueTitle || ''} onChange={handleChange} required placeholder="مثال: تسريب في المطبخ" />
+                </div>
+
+                <div>
                     <label className={labelCls}>وصف الطلب</label>
-                    <textarea className={`${inputCls} min-h-[110px]`} name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="اكتب وصفًا واضحًا للمشكلة أو الأعمال المطلوبة" />
-                 </div>
-                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <textarea className={${inputCls} min-h-[110px]} name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="اكتب وصفاً واضحاً للمشكلة أو الأعمال المطلوبة" />
+                </div>
+
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                     <div>
                         <label className={labelCls}>الحالة</label>
-                        <select className={inputCls} name="status" value={data.status} onChange={handleChange}><option value="NEW">جديد</option><option value="IN_PROGRESS">قيد التنفيذ</option><option value="COMPLETED">مكتمل</option><option value="CLOSED">مغلق</option></select>
+                        <select className={inputCls} name="status" value={data.status} onChange={handleChange}>
+                            <option value="NEW">جديد</option>
+                            <option value="IN_PROGRESS">جارٍ التنفيذ</option>
+                            <option value="COMPLETED">مكتمل</option>
+                            <option value="CLOSED">مغلق</option>
+                        </select>
                     </div>
                     <div>
                         <label className={labelCls}>التكلفة</label>
-                        <input className={inputCls} name="cost" type="number" value={data.cost || ''} onChange={handleChange} placeholder="0.000"/>
+                        <input className={inputCls} name="cost" type="number" value={data.cost ?? ''} onChange={handleChange} placeholder="0.000" min="0" step="0.001" />
                     </div>
                     <div>
                         <label className={labelCls}>تحميل التكلفة على</label>
-                        <select className={inputCls} name="chargedTo" value={data.chargedTo} onChange={handleChange}><option value="OWNER">المالك</option><option value="OFFICE">المكتب</option><option value="TENANT">المستأجر</option></select>
+                        <select className={inputCls} name="chargedTo" value={data.chargedTo} onChange={handleChange}>
+                            <option value="OWNER">المالك</option>
+                            <option value="OFFICE">المكتب</option>
+                            <option value="TENANT">المستأجر</option>
+                        </select>
                     </div>
-                 </div>
-                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800"><button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button><button type="submit" className={primaryButtonCls}>حفظ</button></div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+                    <button type="button" onClick={onClose} className={ghostButtonCls}>إلغاء</button>
+                    <button type="submit" className={primaryButtonCls}>حفظ</button>
+                </div>
             </form>
         </Modal>
     );
 };
 
 export default Maintenance;
+
+
+
+
 

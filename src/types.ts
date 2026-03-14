@@ -66,6 +66,12 @@ export interface CompanyInfo {
   email: string;
   logo: string;
   logoDataUrl?: string;
+  appName?: string;
+  tagline?: string;
+  primaryColor?: string;
+  reportHeaderText?: string;
+  reportFooterText?: string;
+  defaultTheme?: 'light' | 'dark';
   googleClientId?: string;
   contractAlertDays?: number;
 }

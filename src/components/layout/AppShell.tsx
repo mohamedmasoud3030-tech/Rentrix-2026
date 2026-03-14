@@ -1,7 +1,9 @@
-import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import {
+  BadgeDollarSign,
   Bell,
   Briefcase,
   Building2,
@@ -15,6 +17,7 @@ import {
   Menu,
   MessageSquare,
   Moon,
+  MapPinned,
   Receipt,
   RefreshCw,
   Settings,
@@ -30,11 +33,23 @@ import {
 import { supabase } from '../../lib/supabase';
 import { useApp } from '../../contexts/AppContext';
 import CommandPalette, { CommandItem } from '../shared/CommandPalette';
+import { PermissionAction, UserRole } from '../../types';
+import {
+  applyBrandTheme,
+  getStoredTheme,
+  hexToRgba,
+  resolveBrandingFromSettings,
+  setStoredTheme,
+  THEME_STORAGE_KEY,
+  ThemeMode,
+} from '../../utils/branding';
 
 type NavItem = {
   label: string;
   path: string;
   icon: React.ReactNode;
+  permission?: PermissionAction;
+  roles?: UserRole[];
 };
 
 type NavGroup = {
@@ -51,6 +66,8 @@ const navGroups: NavGroup[] = [
     label: 'العقارات',
     items: [
       { label: 'العقارات والوحدات', path: '/properties', icon: <Building2 size={18} /> },
+      { label: 'الأراضي', path: '/lands', icon: <MapPinned size={18} /> },
+      { label: 'الخريطة العقارية', path: '/map', icon: <MapPinned size={18} /> },
       { label: 'الملاك', path: '/owners', icon: <UserCheck size={18} /> },
       { label: 'المستأجرون', path: '/tenants', icon: <Users size={18} /> },
     ],
@@ -66,7 +83,8 @@ const navGroups: NavGroup[] = [
     label: 'المالية',
     items: [
       { label: 'الخزينة والمالية', path: '/financials', icon: <Wallet size={18} /> },
-      { label: 'المحاسبة', path: '/accounting', icon: <Calculator size={18} /> },
+      { label: 'العمولات', path: '/commissions', icon: <BadgeDollarSign size={18} /> },
+      { label: 'المحاسبة', path: '/accounting', icon: <Calculator size={18} />, permission: 'VIEW_ACCOUNTING' },
       { label: 'كشف حساب المالك', path: '/owner-ledger', icon: <FileText size={18} /> },
     ],
   },
@@ -84,15 +102,16 @@ const navGroups: NavGroup[] = [
       { label: 'التقارير', path: '/reports', icon: <FileBarChart2 size={18} /> },
       { label: 'الإشعارات', path: '/notifications', icon: <Bell size={18} /> },
       { label: 'سجل التدقيق', path: '/audit', icon: <ShieldCheck size={18} /> },
+      { label: 'سلامة البيانات', path: '/audit/integrity', icon: <ShieldCheck size={18} />, roles: ['ADMIN'] },
     ],
   },
   {
     label: 'النظام',
     items: [
-      { label: 'الإعدادات', path: '/settings', icon: <Settings size={18} /> },
+      { label: 'الإعدادات', path: '/settings', icon: <Settings size={18} />, permission: 'MANAGE_SETTINGS' },
       { label: 'النسخ الاحتياطي', path: '/backup', icon: <HardDriveDownload size={18} /> },
-      { label: 'النظام', path: '/system', icon: <Settings size={18} /> },
-      { label: 'المستخدمون (HR)', path: '/hr', icon: <Users size={18} /> },
+      { label: 'النظام', path: '/system', icon: <Settings size={18} />, permission: 'MANAGE_SETTINGS' },
+      { label: 'المستخدمون (HR)', path: '/hr', icon: <Users size={18} />, roles: ['ADMIN'] },
     ],
   },
 ];
@@ -102,16 +121,19 @@ const bottomNavItems: NavItem[] = [
   { label: 'العقود', path: '/contracts', icon: <FileText size={18} /> },
   { label: 'المالية', path: '/financials', icon: <Wallet size={18} /> },
   { label: 'الصيانة', path: '/maintenance', icon: <Wrench size={18} /> },
-  { label: 'الإعدادات', path: '/settings', icon: <Settings size={18} /> },
+  { label: 'الإعدادات', path: '/settings', icon: <Settings size={18} />, permission: 'MANAGE_SETTINGS' },
 ];
 
 const routeLabels: Record<string, string> = {
   '/': 'لوحة القيادة',
   '/owners': 'الملاك',
   '/properties': 'العقارات والوحدات',
+  '/lands': 'الأراضي',
+  '/map': 'الخريطة العقارية',
   '/tenants': 'المستأجرون',
   '/contracts': 'العقود',
   '/financials': 'الخزينة والمالية',
+  '/commissions': 'العمولات',
   '/invoices': 'الفواتير',
   '/accounting': 'المحاسبة',
   '/owner-ledger': 'كشف حساب المالك',
@@ -137,22 +159,33 @@ const quickActions: NavItem[] = [
 
 const AppShell: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light';
-    return window.localStorage.getItem('theme') === 'dark' ? 'dark' : 'light';
-  });
+  const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme('light'));
   const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
   const [isCommandOpen, setIsCommandOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const { db, refreshData } = useApp();
+  const { db, refreshData, canAccess, currentUser } = useApp();
   const pendingNotifications = (db.outgoingNotifications || []).filter((item) => item.status === 'PENDING').length;
+  const brand = useMemo(() => resolveBrandingFromSettings(db.settings), [db.settings]);
+  const logoUrl = brand.logoUrl || db.settings?.company?.logoDataUrl || db.settings?.company?.logo || '';
+  const iconSurfaceStyle = useMemo(
+    () => ({
+      background: `linear-gradient(135deg, ${hexToRgba(brand.primaryColor, 0.88)} 0%, ${brand.primaryColor} 58%, ${hexToRgba(brand.primaryColor, 0.7)} 100%)`,
+    }),
+    [brand.primaryColor],
+  );
 
   useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    document.documentElement.setAttribute('data-theme', theme);
-    window.localStorage.setItem('theme', theme);
-  }, [theme]);
+    applyBrandTheme(theme, brand.primaryColor);
+    setStoredTheme(theme);
+  }, [brand.primaryColor, theme]);
+
+  useEffect(() => {
+    const storedTheme = typeof window === 'undefined' ? null : window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (!storedTheme && brand.defaultTheme !== theme) {
+      setTheme(brand.defaultTheme);
+    }
+  }, [brand.defaultTheme, theme]);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -170,6 +203,10 @@ const AppShell: React.FC = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    document.title = `${currentLabel} | ${brand.appName}`;
+  }, [brand.appName, currentLabel]);
+
+  useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault();
@@ -182,19 +219,35 @@ const AppShell: React.FC = () => {
 
   const currentLabel = useMemo(() => routeLabels[location.pathname] || 'لوحة القيادة', [location.pathname]);
 
+  const canViewItem = useCallback((item: NavItem) => {
+    if (item.roles?.length) return !!currentUser && item.roles.includes(currentUser.role);
+    if (item.permission) return canAccess(item.permission);
+    return true;
+  }, [canAccess, currentUser]);
+
+  const visibleNavGroups = useMemo(
+    () =>
+      navGroups
+        .map((group) => ({ ...group, items: group.items.filter(canViewItem) }))
+        .filter((group) => group.items.length > 0),
+    [canViewItem],
+  );
+
+  const visibleBottomNavItems = useMemo(() => bottomNavItems.filter(canViewItem), [canViewItem]);
+
   const toggleGroup = (label: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
   };
 
   const commandItems: CommandItem[] = useMemo(() => {
-    const navItems = navGroups.flatMap((g) => g.items.map((item) => ({ ...item, badge: g.label })));
+    const navItems = visibleNavGroups.flatMap((group) => group.items.map((item) => ({ ...item, badge: group.label })));
     const quick = quickActions.map((item) => ({ ...item, badge: 'إجراء سريع' }));
     const misc: CommandItem[] = [
       { label: 'الإشعارات', path: '/notifications', icon: null as any, badge: 'مركز' },
       { label: 'سجل التدقيق', path: '/audit', icon: null as any, badge: 'تحكم' },
     ];
     return [...quick, ...navItems, ...misc];
-  }, []);
+  }, [visibleNavGroups]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -218,12 +271,12 @@ const AppShell: React.FC = () => {
       >
         <div className="flex items-center justify-between border-b border-slate-200/70 px-4 py-4 dark:border-slate-800">
           <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-gradient-to-br from-sky-400 via-blue-500 to-cyan-500 text-white shadow-brand">
-              <Building2 size={18} />
+            <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-[18px] text-white shadow-brand" style={iconSurfaceStyle}>
+              {logoUrl ? <img src={logoUrl} alt={brand.companyName} className="h-full w-full object-cover" /> : <Building2 size={18} />}
             </div>
             <div>
-              <p className="text-sm font-black text-slate-900 dark:text-white">Rentrix ERP</p>
-              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">إدارة عقارية ومحاسبية مترابطة</p>
+              <p className="text-sm font-black text-slate-900 dark:text-white">{brand.appName}</p>
+              <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{brand.tagline}</p>
             </div>
           </div>
           <button onClick={() => setIsSidebarOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-white/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white lg:hidden">
@@ -242,7 +295,7 @@ const AppShell: React.FC = () => {
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
-          {navGroups.map((group) => (
+          {visibleNavGroups.map((group) => (
             <section key={group.label}>
               <button
                 type="button"
@@ -392,7 +445,7 @@ const AppShell: React.FC = () => {
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-slate-200/70 bg-white/92 px-2 py-1.5 backdrop-blur-xl shadow-[0_-10px_24px_rgba(15,23,42,0.10)] dark:border-slate-800 dark:bg-slate-950/88 lg:hidden">
-        {bottomNavItems.map((item) => {
+        {visibleBottomNavItems.map((item) => {
           const isActive = location.pathname === item.path;
 
           return (
@@ -417,3 +470,4 @@ const AppShell: React.FC = () => {
 };
 
 export default AppShell;
+
