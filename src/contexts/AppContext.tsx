@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
 import { User, Settings, Database, PermissionAction, ContractBalance, OwnerBalance, AccountBalance, TenantBalance, Governance } from '../types';
-import { sanitizePhoneNumber } from '../utils/helpers';
+import { fixMojibakeDeep, sanitizePhoneNumber } from '../utils/helpers';
 import { supabase } from '../services/db';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
@@ -284,12 +284,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           allData[toCamelCaseStr(table)] = [];
           continue;
         }
-        allData[toCamelCaseStr(table)] = (data || []).map(toCamelCaseObj);
+        allData[toCamelCaseStr(table)] = (data || []).map((row) => fixMojibakeDeep(toCamelCaseObj(row)));
       }
 
-      allData.settings = hydrateSettings(allData.settings[0] || emptySettings);
-      allData.governance = allData.governance[0] || emptyGovernance;
-      allData.serials = allData.serials[0] || DEFAULT_SERIALS;
+      allData.settings = hydrateSettings(fixMojibakeDeep(allData.settings[0] || emptySettings));
+      allData.governance = fixMojibakeDeep(allData.governance[0] || emptyGovernance);
+      allData.serials = fixMojibakeDeep(allData.serials[0] || DEFAULT_SERIALS);
       allData.auth = { users: allData.users || [] };
 
       const { ownerBalances, accountBalances, contractBalances, tenantBalances } = calculateBalances(allData);

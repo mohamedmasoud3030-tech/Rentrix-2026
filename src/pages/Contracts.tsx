@@ -15,7 +15,7 @@ import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import AttachmentsManager from '../components/shared/AttachmentsManager';
 import { ContractPrintable } from '../components/print/ContractPrintable';
 import { exportContractToPdf } from '../services/pdfService';
-import { formatCurrency, formatDate, toArabicDigits } from '../utils/helpers';
+import { fixMojibake, formatCurrency, formatDate, toArabicDigits } from '../utils/helpers';
 
 const inputCls =
   'w-full rounded-2xl border border-slate-200/80 bg-white/90 px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm backdrop-blur-sm transition-all duration-150 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:bg-slate-900';
@@ -39,10 +39,16 @@ type ContractRow = Contract & {
 };
 
 const displayTenantName = (tenant: { name?: string | null; fullName?: string | null } | undefined) =>
-  tenant?.name || tenant?.fullName || 'مستأجر غير محدد';
+  fixMojibake(tenant?.name || tenant?.fullName || 'مستأجر غير محدد');
 
 const displayUnitName = (unit: { name?: string | null; unitNumber?: string | null } | undefined) =>
-  unit?.name || unit?.unitNumber || 'وحدة غير محددة';
+  fixMojibake(unit?.name || unit?.unitNumber || 'وحدة غير محددة');
+
+const getContractStatusLabel = (status: Contract['status']) => {
+  if (status === 'ACTIVE') return 'نشط';
+  if (status === 'ENDED' || status === 'EXPIRED' || status === 'TERMINATED') return 'منتهي';
+  return 'معلّق';
+};
 
 const Contracts: React.FC = () => {
   const { db, dataService, contractBalances } = useApp();
@@ -73,9 +79,9 @@ const Contracts: React.FC = () => {
 
         return {
           ...contract,
-          tenantName: tenant?.name || 'مستأجر غير محدد',
-          unitName: unit?.name || 'وحدة غير محددة',
-          propertyName: property?.name || 'عقار غير محدد',
+          tenantName: displayTenantName(tenant || undefined),
+          unitName: displayUnitName(unit || undefined),
+          propertyName: fixMojibake(property?.name || 'عقار غير محدد'),
           balance,
           isExpiring,
           risk,
@@ -87,6 +93,19 @@ const Contracts: React.FC = () => {
         return new Date(a.end).getTime() - new Date(b.end).getTime();
       });
   }, [contractBalances, db.contracts, db.properties, db.settings, db.tenants, db.units]);
+
+  const stats = useMemo(() => {
+    const active = contractRows.filter((contract) => contract.status === 'ACTIVE').length;
+    const totalRent = contractRows.reduce((sum, contract) => sum + Number(contract.rent || 0), 0);
+    const expiring = contractRows.filter((contract) => contract.isExpiring).length;
+    const overdueBalance = contractRows.reduce((sum, contract) => sum + Math.max(contract.balance, 0), 0);
+    return {
+      active,
+      totalRent,
+      expiring,
+      overdueBalance,
+    };
+  }, [contractRows]);
 
   const filteredContracts = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
@@ -104,7 +123,10 @@ const Contracts: React.FC = () => {
     });
   }, [contractRows, searchTerm, statusFilter]);
 
-  const selectedContract = useMemo(() => contractRows.find((contract) => contract.id === selectedContractId) || contractRows[0] || null, [contractRows, selectedContractId]);
+  const selectedContract = useMemo(
+    () => filteredContracts.find((contract) => contract.id === selectedContractId) || filteredContracts[0] || null,
+    [filteredContracts, selectedContractId],
+  );
 
   const contractWorkspace = useMemo(() => {
     if (!selectedContract) return null;
@@ -291,31 +313,31 @@ const Contracts: React.FC = () => {
                     </Td>
                     <Td>
                       <StatusPill status={contract.status}>
-                        {contract.status === 'ACTIVE' ? 'نشط' : contract.status === 'ENDED' || contract.status === 'EXPIRED' ? 'منتهي' : 'معلّق'}
+                        {getContractStatusLabel(contract.status)}
                       </StatusPill>
                     </Td>
                     <Td>
                       <div className="flex flex-wrap items-center justify-end gap-2">
                         {contract.balance > 0 && (
-                          <button onClick={() => navigate('/financials')} className={dangerButton}>
+                          <button onClick={(event) => { event.stopPropagation(); navigate('/financials'); }} className={dangerButton}>
                             <DollarSign size={14} />
                             تحصيل
                           </button>
                         )}
                         {contract.isExpiring && (
-                          <button onClick={() => openEdit(contract)} className={warningButton}>
+                          <button onClick={(event) => { event.stopPropagation(); openEdit(contract); }} className={warningButton}>
                             <RefreshCw size={14} />
                             تجديد
                           </button>
                         )}
-                        <button onClick={() => openEdit(contract)} className={ghostButton}>
+                        <button onClick={(event) => { event.stopPropagation(); openEdit(contract); }} className={ghostButton}>
                           تعديل
                         </button>
-                        <button onClick={() => setPrintingContract(contract)} className={ghostButton}>
+                        <button onClick={(event) => { event.stopPropagation(); setPrintingContract(contract); }} className={ghostButton}>
                           <Printer size={14} />
                           طباعة
                         </button>
-                        <button onClick={() => handleDelete(contract.id)} className={dangerButton}>
+                        <button onClick={(event) => { event.stopPropagation(); void handleDelete(contract.id); }} className={dangerButton}>
                           <Trash2 size={14} />
                           حذف
                         </button>
@@ -675,5 +697,8 @@ const ContractForm: React.FC<{ isOpen: boolean; onClose: () => void; contract: C
 };
 
 export default Contracts;
+
+
+
 
 

@@ -11,9 +11,9 @@ interface ModalProps {
 
 const sizeMap: Record<NonNullable<ModalProps['size']>, string> = {
   sm: 'max-w-sm sm:max-w-md',
-  md: 'max-w-md sm:max-w-lg md:max-w-[44rem]',
-  lg: 'max-w-lg sm:max-w-2xl md:max-w-[56rem]',
-  xl: 'max-w-xl sm:max-w-3xl md:max-w-5xl',
+  md: 'max-w-md sm:max-w-lg md:max-w-[40rem]',
+  lg: 'max-w-lg sm:max-w-2xl md:max-w-[52rem]',
+  xl: 'max-w-xl sm:max-w-3xl md:max-w-[72rem]',
 };
 
 const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 'md' }) => {
@@ -37,12 +37,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/65 px-3 py-3 backdrop-blur-lg" onClick={handleBackdropClick}>
+    <div className="modal-container fixed inset-0 z-[70] flex items-center justify-center bg-slate-950/65 px-3 py-3 backdrop-blur-lg" onClick={handleBackdropClick}>
       <div
-        className={`relative w-full ${sizeMap[size]} overflow-hidden rounded-[24px] border border-white/80 bg-white/95 shadow-brand-lg transition-all duration-200 ease-out dark:border-slate-800 dark:bg-slate-950/95`}
+        className={`modal-content relative w-full ${sizeMap[size]} overflow-hidden rounded-[22px] border border-white/80 bg-white/95 shadow-brand-lg transition-all duration-200 ease-out dark:border-slate-800 dark:bg-slate-950/95`}
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-3.5 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200/80 bg-white/90 px-4 py-3 backdrop-blur-md dark:border-slate-800 dark:bg-slate-950/90">
           <div className="flex-1">
             <h2 className="text-base font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-lg">{title}</h2>
           </div>
@@ -54,7 +54,7 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, size = 
             <X size={16} />
           </button>
         </div>
-        <div className="max-h-[calc(100vh-5.5rem)] overflow-y-auto px-4 py-4 dark:text-slate-200">{children}</div>
+        <div className="max-h-[calc(100vh-5.5rem)] overflow-y-auto px-4 py-3.5 dark:text-slate-200">{children}</div>
       </div>
     </div>
   );

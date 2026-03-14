@@ -5,35 +5,50 @@ import AppShell from './components/layout/AppShell';
 import { AppProvider } from './contexts/AppContext';
 import ErrorBoundary from './components/ErrorBoundary';
 
+const lazyWithRetry = <T extends React.ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
+  lazy(async () => {
+    try {
+      return await factory();
+    } catch (error) {
+      const hasReloaded = sessionStorage.getItem('rentrix:lazy-reload');
+      if (!hasReloaded) {
+        sessionStorage.setItem('rentrix:lazy-reload', '1');
+        window.location.reload();
+      }
+      throw error;
+    } finally {
+      sessionStorage.removeItem('rentrix:lazy-reload');
+    }
+  });
+
 // Lazy load pages
-const Owners = lazy(() => import('./pages/Owners'));
-const Properties = lazy(() => import('./pages/PropertiesAndUnits'));
-const Tenants = lazy(() => import('./pages/Tenants'));
-const Contracts = lazy(() => import('./pages/Contracts'));
-const Login = lazy(() => import('./pages/Login'));
-const Financials = lazy(() => import('./pages/Financials'));
-const Invoices = lazy(() => import('./pages/Invoices'));
-const Accounting = lazy(() => import('./pages/Accounting'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const Maintenance = lazy(() => import('./pages/Maintenance'));
-const Missions = lazy(() => import('./pages/Missions'));
-const Leads = lazy(() => import('./pages/Leads'));
-const Settings = lazy(() => import('./pages/Settings'));
-const CommunicationHub = lazy(() => import('./pages/CommunicationHub'));
-const Reports = lazy(() => import('./pages/Reports'));
-const AuditLog = lazy(() => import('./pages/AuditLog'));
-const Backup = lazy(() => import('./pages/Backup'));
-const HR = lazy(() => import('./pages/HR'));
-const DataIntegrityAudit = lazy(() => import('./pages/DataIntegrityAudit'));
-// Split lands and commissions into standalone pages
-const Lands = lazy(() => import('./pages/Lands'));
-const Commissions = lazy(() => import('./pages/Commissions'));
-const PropertyMap = lazy(() => import('./pages/PropertyMap'));
-const System = lazy(() => import('./pages/System'));
-const OwnerLedgerReport = lazy(() => import('./pages/OwnerLedgerReport'));
-const PrintContract = lazy(() => import('./pages/print/PrintContract'));
-const PrintReceipt = lazy(() => import('./pages/print/PrintReceipt'));
-const OwnerView = lazy(() => import('./pages/OwnerView'));
+const Owners = lazyWithRetry(() => import('./pages/Owners'));
+const Properties = lazyWithRetry(() => import('./pages/PropertiesAndUnits'));
+const Tenants = lazyWithRetry(() => import('./pages/Tenants'));
+const Contracts = lazyWithRetry(() => import('./pages/Contracts'));
+const Login = lazyWithRetry(() => import('./pages/Login'));
+const Financials = lazyWithRetry(() => import('./pages/Financials'));
+const Invoices = lazyWithRetry(() => import('./pages/Invoices'));
+const Accounting = lazyWithRetry(() => import('./pages/Accounting'));
+const Dashboard = lazyWithRetry(() => import('./pages/Dashboard'));
+const Maintenance = lazyWithRetry(() => import('./pages/Maintenance'));
+const Missions = lazyWithRetry(() => import('./pages/Missions'));
+const Leads = lazyWithRetry(() => import('./pages/Leads'));
+const Settings = lazyWithRetry(() => import('./pages/Settings'));
+const CommunicationHub = lazyWithRetry(() => import('./pages/CommunicationHub'));
+const Reports = lazyWithRetry(() => import('./pages/Reports'));
+const AuditLog = lazyWithRetry(() => import('./pages/AuditLog'));
+const Backup = lazyWithRetry(() => import('./pages/Backup'));
+const HR = lazyWithRetry(() => import('./pages/HR'));
+const DataIntegrityAudit = lazyWithRetry(() => import('./pages/DataIntegrityAudit'));
+const Lands = lazyWithRetry(() => import('./pages/Lands'));
+const Commissions = lazyWithRetry(() => import('./pages/Commissions'));
+const PropertyMap = lazyWithRetry(() => import('./pages/PropertyMap'));
+const System = lazyWithRetry(() => import('./pages/System'));
+const OwnerLedgerReport = lazyWithRetry(() => import('./pages/OwnerLedgerReport'));
+const PrintContract = lazyWithRetry(() => import('./pages/print/PrintContract'));
+const PrintReceipt = lazyWithRetry(() => import('./pages/print/PrintReceipt'));
+const OwnerView = lazyWithRetry(() => import('./pages/OwnerView'));
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [session, setSession] = useState<any>(null);
@@ -55,7 +70,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
   }, []);
 
   if (loading) {
-    return <div>جاري تحميل رينتريكس...</div>; // Customized loading message
+    return <div dir="rtl">جاري تحميل رينتريكس...</div>;
   }
 
   if (!session) {

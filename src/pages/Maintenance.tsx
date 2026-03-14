@@ -91,9 +91,16 @@ const Maintenance: React.FC = () => {
         const threeDaysAgo = new Date();
         threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
 
+        const normalizedSearch = searchTerm.trim().toLowerCase();
+
         return db.maintenanceRecords.filter(rec => {
+            if (!normalizedSearch) return true;
             const unit = db.units.find(u => u.id === rec.unitId);
-            return rec.no.includes(searchTerm) || rec.description.includes(searchTerm) || (unit?.name || '').includes(searchTerm);
+            const haystack = [rec.no, rec.description, unit?.name, unit?.unitNumber]
+                .filter((value): value is string => Boolean(value))
+                .map((value) => value.toLowerCase())
+                .join(' ');
+            return haystack.includes(normalizedSearch);
         }).map(rec => ({
             ...rec,
             isAging: rec.status === 'NEW' && new Date(rec.requestDate) < threeDaysAgo
@@ -416,3 +423,4 @@ const MaintenanceForm: React.FC<{ isOpen: boolean, onClose: () => void, record: 
 };
 
 export default Maintenance;
+
