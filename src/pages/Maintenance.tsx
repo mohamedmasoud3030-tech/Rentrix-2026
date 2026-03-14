@@ -1,4 +1,4 @@
-﻿
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
 import { MaintenanceRecord, Expense, Invoice } from '../types';
@@ -267,7 +267,7 @@ const Maintenance: React.FC = () => {
 
                 <div>
                     <label className={labelCls}>وصف الطلب</label>
-                    <textarea className={${inputCls} min-h-[110px]} name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="اكتب وصفاً واضحاً للمشكلة أو الأعمال المطلوبة" />
+                    <textarea className={`${inputCls} min-h-[110px]`} name="description" value={data.description} onChange={handleChange} required rows={3} placeholder="اكتب وصفاً واضحاً للمشكلة أو الأعمال المطلوبة" />
                 </div>
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
