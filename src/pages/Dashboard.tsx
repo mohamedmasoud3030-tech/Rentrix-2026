@@ -48,8 +48,13 @@ const monthLabel = (offset: number) =>
 
 const Dashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { db, currentUser, rebuildFinancials } = useApp();
+  const { db, rebuildFinancials } = useApp();
   const currency = db.settings?.currency || 'OMR';
+  const officeName =
+    db.settings?.company?.companyName ||
+    db.settings?.company?.name ||
+    db.settings?.company?.appName ||
+    'مكتب الإدارة العقارية';
 
   const data = useMemo(() => {
     const activeContracts = db.contracts.filter((contract) => contract.status === 'ACTIVE');
@@ -235,7 +240,7 @@ const Dashboard: React.FC = () => {
               لوحة تنفيذية
             </div>
             <h2 className="mt-4 text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-              أهلاً {currentUser?.username || 'بك'} في Rentrix
+              أهلًا بك يا {officeName}
             </h2>
             <p className="mt-3 max-w-3xl text-sm leading-8 text-slate-600 dark:text-slate-300">
               هذه الشاشة تجمع أهم مؤشرات المكتب التنفيذية يوميًا: الإشغال، الإيرادات، المتأخرات، الصيانة المفتوحة، وحركة العقود.
