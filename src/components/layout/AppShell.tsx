@@ -202,6 +202,8 @@ const AppShell: React.FC = () => {
     setIsSidebarOpen(false);
   }, [location.pathname]);
 
+  const currentLabel = useMemo(() => routeLabels[location.pathname] || 'لوحة القيادة', [location.pathname]);
+
   useEffect(() => {
     document.title = `${currentLabel} | ${brand.appName}`;
   }, [brand.appName, currentLabel]);
@@ -216,8 +218,6 @@ const AppShell: React.FC = () => {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
-
-  const currentLabel = useMemo(() => routeLabels[location.pathname] || 'لوحة القيادة', [location.pathname]);
 
   const canViewItem = useCallback((item: NavItem) => {
     if (item.roles?.length) return !!currentUser && item.roles.includes(currentUser.role);
