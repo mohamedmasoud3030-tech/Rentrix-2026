@@ -246,6 +246,14 @@ tfoot td { @apply font-bold text-heading; }
   animation: page-enter 220ms ease-out;
 }
 
+.print-document {
+  @apply mx-auto w-full max-w-[210mm];
+}
+
+.print-sheet {
+  @apply min-h-[297mm] bg-white px-[14mm] py-[16mm] text-slate-900;
+}
+
 @keyframes page-enter {
   from {
     opacity: 0;
@@ -254,6 +262,26 @@ tfoot td { @apply font-bold text-heading; }
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body {
+    overflow: visible !important;
+  }
+
+  .print-document {
+    max-width: none;
+  }
+
+  .print-sheet {
+    min-height: auto;
+    padding: 0;
   }
 }
 

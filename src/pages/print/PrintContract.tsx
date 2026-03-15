@@ -10,6 +10,10 @@ const PrintContract: React.FC = () => {
 
   const contract = db.contracts.find((c) => c.id === id);
   const settings = db.settings;
+  const unit = contract ? db.units.find((item) => item.id === contract.unitId) : null;
+  const property = unit ? db.properties.find((item) => item.id === unit.propertyId) : null;
+  const owner = property ? db.owners.find((item) => item.id === property.ownerId) : null;
+  const tenant = contract ? db.tenants.find((item) => item.id === contract.tenantId) : null;
 
   useEffect(() => {
     if (contract) {
@@ -28,7 +32,14 @@ const PrintContract: React.FC = () => {
 
   return (
     <div className="p-4" dir="rtl">
-      <ContractPrintable contract={contract} settings={settings} />
+      <ContractPrintable
+        contract={contract}
+        settings={settings}
+        tenantName={tenant?.name || tenant?.fullName || 'مستأجر غير محدد'}
+        unitName={unit?.name || unit?.unitNumber || 'وحدة غير محددة'}
+        propertyName={property?.name || 'عقار غير محدد'}
+        ownerName={owner?.name || 'مالك غير محدد'}
+      />
     </div>
   );
 };

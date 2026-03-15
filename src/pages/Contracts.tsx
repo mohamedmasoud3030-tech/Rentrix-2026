@@ -595,7 +595,18 @@ const Contracts: React.FC = () => {
             exportContractToPdf(printingContract, tenant, unit, property, owner, db.settings);
           }}
         >
-          <ContractPrintable contract={printingContract} settings={db.settings} />
+          <ContractPrintable
+            contract={printingContract}
+            settings={db.settings}
+            tenantName={displayTenantName(db.tenants.find((item) => item.id === printingContract.tenantId) || undefined)}
+            unitName={displayUnitName(db.units.find((item) => item.id === printingContract.unitId) || undefined)}
+            propertyName={fixMojibake(
+              db.properties.find((property) => property.id === db.units.find((item) => item.id === printingContract.unitId)?.propertyId)?.name || 'عقار غير محدد',
+            )}
+            ownerName={fixMojibake(
+              db.owners.find((owner) => owner.id === db.properties.find((property) => property.id === db.units.find((item) => item.id === printingContract.unitId)?.propertyId)?.ownerId)?.name || 'مالك غير محدد',
+            )}
+          />
         </PrintPreviewModal>
       )}
 
