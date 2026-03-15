@@ -23,7 +23,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, onChange, vari
 
   if (variant === 'pill') {
     return (
-      <div className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/78 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/76">
+      <div className="flex flex-wrap items-center gap-2 rounded-[24px] border border-slate-200/80 bg-white/94 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-700/80 dark:bg-slate-900/88">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -33,8 +33,8 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, onChange, vari
               onClick={() => handleTabClick(tab.id)}
               className={`inline-flex items-center gap-2 rounded-[18px] px-3.5 py-2 text-sm font-bold transition-all ${
                 isActive
-                  ? 'bg-slate-950 text-white shadow-brand dark:bg-sky-400/15 dark:text-sky-100'
-                  : 'text-slate-500 hover:bg-white hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                  ? 'bg-slate-950 text-white shadow-sm dark:bg-primary/15 dark:text-sky-100'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
               }`}
             >
               {tab.icon}
@@ -57,7 +57,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, onChange, vari
 
   return (
     <div className="overflow-x-auto">
-      <div className="inline-flex min-w-full items-center gap-1 rounded-[24px] border border-slate-200/80 bg-white/80 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/76">
+      <div className="inline-flex min-w-full items-center gap-1 rounded-[24px] border border-slate-200/80 bg-white/94 p-1.5 shadow-sm backdrop-blur-md dark:border-slate-800/80 dark:bg-slate-900/88">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           return (
@@ -67,7 +67,7 @@ const Tabs: React.FC<TabsProps> = ({ tabs, activeTab, onTabClick, onChange, vari
               onClick={() => handleTabClick(tab.id)}
               className={`relative inline-flex min-w-fit items-center gap-2 rounded-[18px] px-4 py-2.5 text-sm font-extrabold transition-all ${
                 isActive
-                  ? 'bg-white text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
+                  ? 'bg-slate-50 text-slate-950 shadow-sm dark:bg-slate-800 dark:text-white'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700 dark:text-slate-400 dark:hover:bg-slate-800/80 dark:hover:text-slate-200'
               }`}
             >
