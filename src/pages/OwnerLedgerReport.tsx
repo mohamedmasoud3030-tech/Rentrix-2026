@@ -10,6 +10,7 @@ import TableWrapper, { Th, Td, Tr } from '../components/ui/TableWrapper';
 import EmptyState from '../components/ui/EmptyState';
 import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import { exportOwnerLedgerToPdf } from '../services/pdfService';
+import ReportDocumentLayout from '../components/print/ReportDocumentLayout';
 import { AlertTriangle, BarChart3, CalendarClock, CalendarRange, Download, Landmark, Percent, Printer, ReceiptText, ShieldAlert, Wallet, Wrench } from 'lucide-react';
 import WorkspaceSection from '../components/ui/WorkspaceSection';
 import FormSection from '../components/ui/FormSection';
@@ -24,6 +25,7 @@ const OwnerLedgerReport: React.FC = () => {
   const presetOwnerId = params.get('ownerId') || '';
   const { db } = useApp();
   const { settings } = db;
+  const currency = settings?.currency || 'OMR';
 
   const [ownerId, setOwnerId] = useState(presetOwnerId);
   const [startDate, setStartDate] = useState('');
@@ -324,10 +326,10 @@ const OwnerLedgerReport: React.FC = () => {
         <>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
             <SummaryStatCard title="نوع الاتفاق" value={report.commissionTypeLabel} icon={<Percent size={18} />} color="slate" />
-            <SummaryStatCard title="إجمالي التحصيل" value={formatCurrency(report.grossCollections)} icon={<ReceiptText size={18} />} color="blue" />
-            <SummaryStatCard title="مصروفات المالك" value={formatCurrency(report.ownerExpensesTotal)} icon={<Wallet size={18} />} color="rose" />
-            <SummaryStatCard title="قبل العمولة" value={formatCurrency(report.beforeCommission)} icon={<Landmark size={18} />} color="amber" />
-            <SummaryStatCard title="بعد العمولة" value={formatCurrency(report.afterCommission)} icon={<BarChart3 size={18} />} color="emerald" />
+            <SummaryStatCard title="إجمالي التحصيل" value={formatCurrency(report.grossCollections, currency)} icon={<ReceiptText size={18} />} color="blue" />
+            <SummaryStatCard title="مصروفات المالك" value={formatCurrency(report.ownerExpensesTotal, currency)} icon={<Wallet size={18} />} color="rose" />
+            <SummaryStatCard title="قبل العمولة" value={formatCurrency(report.beforeCommission, currency)} icon={<Landmark size={18} />} color="amber" />
+            <SummaryStatCard title="بعد العمولة" value={formatCurrency(report.afterCommission, currency)} icon={<BarChart3 size={18} />} color="emerald" />
           </div>
 
           <div className="mt-4">
@@ -401,7 +403,7 @@ const OwnerLedgerReport: React.FC = () => {
                   <div key={bar.label} className="space-y-2">
                     <div className="flex items-center justify-between text-sm">
                       <span className="font-bold text-slate-700">{bar.label}</span>
-                      <span className="font-mono font-bold text-slate-800">{formatCurrency(bar.value)}</span>
+                      <span className="font-mono font-bold text-slate-800">{formatCurrency(bar.value, currency)}</span>
                     </div>
                     <div className="h-2 overflow-hidden rounded-full bg-slate-200">
                       <div className={`h-full rounded-full ${bar.color}`} style={{ width: bar.width }} />
@@ -417,10 +419,10 @@ const OwnerLedgerReport: React.FC = () => {
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>عدد العقارات</span><strong className="text-slate-800">{report.properties.length.toLocaleString('ar')}</strong></div>
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>عدد الوحدات</span><strong className="text-slate-800">{report.units.length.toLocaleString('ar')}</strong></div>
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>نوع الاتفاق</span><strong className="text-slate-800">{report.commissionTypeLabel}</strong></div>
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>قيمة الاتفاق</span><strong className="text-slate-800">{report.owner.commissionType === 'FIXED' ? formatCurrency(report.owner.commissionValue || 0) : `${report.owner.commissionValue || 0}%`}</strong></div>
-                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>مصروفات الخدمات</span><strong className="text-slate-800">{formatCurrency(report.utilityExpensesTotal)}</strong></div>
-                <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3"><span>عمولة المكتب المحتسبة</span><strong className="text-blue-700">{formatCurrency(report.officeShare)}</strong></div>
-                <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3"><span>الرصيد النهائي بعد الخصم</span><strong className="text-emerald-700">{formatCurrency(report.outstandingBalance)}</strong></div>
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>قيمة الاتفاق</span><strong className="text-slate-800">{report.owner.commissionType === 'FIXED' ? formatCurrency(report.owner.commissionValue || 0, currency) : `${report.owner.commissionValue || 0}%`}</strong></div>
+                <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>مصروفات الخدمات</span><strong className="text-slate-800">{formatCurrency(report.utilityExpensesTotal, currency)}</strong></div>
+                <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3"><span>عمولة المكتب المحتسبة</span><strong className="text-blue-700">{formatCurrency(report.officeShare, currency)}</strong></div>
+                <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3"><span>الرصيد النهائي بعد الخصم</span><strong className="text-emerald-700">{formatCurrency(report.outstandingBalance, currency)}</strong></div>
               </div>
             </WorkspaceSection>
           </div>
@@ -510,11 +512,11 @@ const OwnerLedgerReport: React.FC = () => {
                     <Tr key={`${tx.type}-${tx.id}`}>
                       <Td>{formatDate(tx.date)}</Td>
                       <Td className="max-w-[320px] text-sm text-slate-700">{tx.label}</Td>
-                      <Td className={`text-left font-mono font-bold ${tx.gross >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>{formatCurrency(tx.gross)}</Td>
-                      <Td className="text-left font-mono font-bold text-amber-600">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction) : '—'}</Td>
-                      <Td className="text-left font-mono font-bold text-emerald-700">{formatCurrency(tx.ownerNet)}</Td>
-                      <Td className="text-left font-mono">{formatCurrency(tx.runningBefore)}</Td>
-                      <Td className="text-left font-mono font-bold">{formatCurrency(tx.runningAfter)}</Td>
+                      <Td className={`text-left font-mono font-bold ${tx.gross >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>{formatCurrency(tx.gross, currency)}</Td>
+                      <Td className="text-left font-mono font-bold text-amber-600">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction, currency) : '—'}</Td>
+                      <Td className="text-left font-mono font-bold text-emerald-700">{formatCurrency(tx.ownerNet, currency)}</Td>
+                      <Td className="text-left font-mono">{formatCurrency(tx.runningBefore, currency)}</Td>
+                      <Td className="text-left font-mono font-bold">{formatCurrency(tx.runningAfter, currency)}</Td>
                     </Tr>
                   ))}
                 </tbody>
@@ -542,65 +544,44 @@ const OwnerLedgerReport: React.FC = () => {
               );
             }}
           >
-            {report && (
-              <div className="space-y-6 text-right text-slate-800">
-                <div className="border-b border-slate-200 pb-4">
-                  <h2 className="text-2xl font-black">كشف حساب المالك</h2>
-                  <p className="mt-2 text-sm text-slate-500">{report.owner.name}</p>
-                  <p className="mt-1 text-xs text-slate-400">
-                    {startDate || endDate
-                      ? `الفترة: ${startDate ? formatDate(startDate) : 'من البداية'} إلى ${endDate ? formatDate(endDate) : 'حتى اليوم'}`
-                      : 'الفترة: جميع الحركات المسجلة'}
-                  </p>
-                </div>
-
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500">إجمالي التحصيل</p>
-                    <p className="mt-2 text-lg font-black text-slate-800">{formatCurrency(report.grossCollections)}</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500">عمولة المكتب</p>
-                    <p className="mt-2 text-lg font-black text-amber-600">{formatCurrency(report.officeShare)}</p>
-                  </div>
-                  <div className="rounded-xl bg-slate-50 px-4 py-3">
-                    <p className="text-xs font-bold text-slate-500">الصافي بعد العمولة</p>
-                    <p className="mt-2 text-lg font-black text-emerald-700">{formatCurrency(report.afterCommission)}</p>
-                  </div>
-                </div>
-
-                <div className="overflow-hidden rounded-2xl border border-slate-200">
-                  <table className="min-w-full text-sm">
-                    <thead className="bg-slate-50">
-                      <tr>
-                        <th className="px-4 py-3 text-right font-bold text-slate-500">التاريخ</th>
-                        <th className="px-4 py-3 text-right font-bold text-slate-500">البيان</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-500">الإجمالي</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-500">عمولة المكتب</th>
-                        <th className="px-4 py-3 text-left font-bold text-slate-500">صافي المالك</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {report.transactions.slice(0, 18).map((tx) => (
-                        <tr key={`preview-${tx.type}-${tx.id}`} className="border-t border-slate-100">
-                          <td className="px-4 py-3">{formatDate(tx.date)}</td>
-                          <td className="px-4 py-3 text-slate-700">{tx.label}</td>
-                          <td className="px-4 py-3 text-left font-mono">{formatCurrency(tx.gross)}</td>
-                          <td className="px-4 py-3 text-left font-mono">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction) : '—'}</td>
-                          <td className="px-4 py-3 text-left font-mono font-bold">{formatCurrency(tx.ownerNet)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {report.transactions.length > 18 && (
-                  <p className="text-xs text-slate-400">
-                    تعرض المعاينة أول {report.transactions.slice(0, 18).length.toLocaleString('ar')} حركة فقط. ملف PDF سيحتوي على جميع الحركات المطابقة للفلاتر.
-                  </p>
-                )}
-              </div>
-            )}
+            {report && settings ? (
+              <ReportDocumentLayout
+                company={settings.company}
+                title="كشف حساب المالك"
+                metadata={[
+                  { label: 'المالك', value: report.owner.name },
+                  { label: 'نظام العمولة', value: report.commissionTypeLabel },
+                  {
+                    label: 'الفترة',
+                    value: startDate || endDate
+                      ? `${startDate ? formatDate(startDate) : 'من البداية'} إلى ${endDate ? formatDate(endDate) : 'حتى اليوم'}`
+                      : 'جميع الحركات المسجلة',
+                  },
+                ]}
+                summary={[
+                  { label: 'إجمالي التحصيل', value: formatCurrency(report.grossCollections, currency) },
+                  { label: 'عمولة المكتب', value: formatCurrency(report.officeShare, currency) },
+                  { label: 'الصافي بعد العمولة', value: formatCurrency(report.afterCommission, currency) },
+                ]}
+                columns={[
+                  { key: 'date', label: 'التاريخ' },
+                  { key: 'statement', label: 'البيان' },
+                  { key: 'gross', label: 'الإجمالي', align: 'left' },
+                  { key: 'commission', label: 'عمولة المكتب', align: 'left' },
+                  { key: 'net', label: 'صافي المالك', align: 'left' },
+                ]}
+                rows={report.transactions.map((tx) => ({
+                  date: formatDate(tx.date),
+                  statement: tx.label,
+                  gross: formatCurrency(tx.gross, currency),
+                  commission: tx.commissionDeduction ? formatCurrency(tx.commissionDeduction, currency) : '—',
+                  net: formatCurrency(tx.ownerNet, currency),
+                }))}
+                notes={[
+                  'يعكس هذا الكشف التحصيلات والمصروفات الخاصة بالمالك مع احتساب عمولة المكتب حسب الاتفاق.',
+                ]}
+              />
+            ) : null}
           </PrintPreviewModal>
         </>
       ) : (

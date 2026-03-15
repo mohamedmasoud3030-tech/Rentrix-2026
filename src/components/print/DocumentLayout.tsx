@@ -1,6 +1,7 @@
 import React from 'react';
 import { Settings } from '../../types';
 import { resolveBrandingFromSettings } from '../../utils/branding';
+import { formatDateTime } from '../../utils/helpers';
 
 export interface DocumentInfoItem {
   label: string;
@@ -44,23 +45,38 @@ const DocumentLayout: React.FC<DocumentLayoutProps> = ({ settings, title, subtit
   const company = settings?.company;
   const brand = resolveBrandingFromSettings(settings || undefined);
   const companyName = company?.companyName || company?.name || brand.companyName;
+  const logoUrl = brand.logoUrl || company?.logoDataUrl || company?.companyLogo || company?.logo || '';
+  const printDate = formatDateTime(new Date().toISOString());
 
   return (
     <div className="print-document" dir="rtl">
       <div className="print-sheet space-y-8">
         <header className="flex items-start justify-between gap-6 border-b border-slate-200 pb-6">
-          <div className="space-y-3">
-            {badge ? <p className="text-[11px] font-extrabold tracking-[0.18em] text-slate-400">{badge}</p> : null}
-            <h1 className="text-[2rem] font-black tracking-tight text-slate-950">{title}</h1>
-            {subtitle ? <p className="text-sm leading-7 text-slate-600">{subtitle}</p> : null}
+          <div className="flex items-start gap-4">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={companyName || 'شعار الشركة'}
+                className="h-14 w-14 rounded-2xl border border-slate-200 bg-white object-contain p-2"
+              />
+            ) : null}
+            <div className="space-y-3">
+              {badge ? <p className="text-[11px] font-extrabold tracking-[0.18em] text-slate-400">{badge}</p> : null}
+              <h1 className="text-[2rem] font-black tracking-tight text-slate-950">{title}</h1>
+              {subtitle ? <p className="text-sm leading-7 text-slate-600">{subtitle}</p> : null}
+            </div>
           </div>
 
-          <div className="max-w-[320px] text-right">
+          <div className="max-w-[340px] text-right">
             <h2 className="text-[1.65rem] font-black tracking-tight text-slate-950">{companyName}</h2>
             {company?.address ? <p className="mt-2 text-sm leading-7 text-slate-600">{company.address}</p> : null}
             <div className="mt-3 space-y-1 text-sm text-slate-600">
               {company?.phone ? <div>{company.phone}</div> : null}
               {company?.email ? <div>{company.email}</div> : null}
+            </div>
+            <div className="mt-4 rounded-[18px] border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+              <div className="font-extrabold tracking-[0.12em] text-slate-500">تاريخ الطباعة</div>
+              <div className="mt-1 font-black text-slate-900">{printDate}</div>
             </div>
           </div>
         </header>
@@ -69,7 +85,7 @@ const DocumentLayout: React.FC<DocumentLayoutProps> = ({ settings, title, subtit
 
         <footer className="border-t border-slate-200 pt-4 text-center text-xs leading-7 text-slate-500">
           <div>{brand.reportFooterText}</div>
-          <div>تم إنشاء هذه النسخة من نظام Rentrix ERP</div>
+          <div>{brand.appName} | {printDate}</div>
         </footer>
       </div>
     </div>
