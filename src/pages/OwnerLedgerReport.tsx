@@ -3,7 +3,6 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { formatCurrency, formatDate } from '../utils/helpers';
 import PageHeader from '../components/ui/PageHeader';
-import Card from '../components/ui/Card';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
 import SearchFilterBar from '../components/shared/SearchFilterBar';
 import StatusPill from '../components/ui/StatusPill';
@@ -12,6 +11,9 @@ import EmptyState from '../components/ui/EmptyState';
 import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import { exportOwnerLedgerToPdf } from '../services/pdfService';
 import { AlertTriangle, BarChart3, CalendarClock, CalendarRange, Download, Landmark, Percent, Printer, ReceiptText, ShieldAlert, Wallet, Wrench } from 'lucide-react';
+import WorkspaceSection from '../components/ui/WorkspaceSection';
+import FormSection from '../components/ui/FormSection';
+import Tabs from '../components/ui/Tabs';
 
 const inputCls = 'w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm text-slate-800 transition-all placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20';
 
@@ -28,6 +30,7 @@ const OwnerLedgerReport: React.FC = () => {
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
+  const [ledgerTab, setLedgerTab] = useState<'summary' | 'transactions'>('summary');
 
   const report = useMemo(() => {
     if (!ownerId) return null;
@@ -282,8 +285,8 @@ const OwnerLedgerReport: React.FC = () => {
         </button>
       </div>
 
-      <Card>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <WorkspaceSection title="تصفية كشف الحساب" description="حدد المالك والفترة المطلوبة قبل عرض البيانات.">
+        <FormSection title="اختيار المالك والفترة" columns={3}>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate-600">اختر المالك</label>
             <select className={inputCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
@@ -299,23 +302,23 @@ const OwnerLedgerReport: React.FC = () => {
             <label className="mb-1.5 block text-xs font-bold text-slate-600">إلى تاريخ</label>
             <input className={inputCls} type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
           </div>
-          <div className="flex items-end gap-2">
-            <button
-              type="button"
-              onClick={() => ownerPdfPayload && exportOwnerLedgerToPdf(ownerPdfPayload)}
-              disabled={!ownerPdfPayload}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Download size={16} /> تصدير PDF
-            </button>
-          </div>
+        </FormSection>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {ownerId ? (
+            <div className="min-w-[240px] flex-1">
+              <SearchFilterBar value={search} onSearch={setSearch} placeholder="بحث داخل البيان أو نوع الحركة..." />
+            </div>
+          ) : null}
+          <button
+            type="button"
+            onClick={() => ownerPdfPayload && exportOwnerLedgerToPdf(ownerPdfPayload)}
+            disabled={!ownerPdfPayload}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download size={16} /> تصدير PDF
+          </button>
         </div>
-        {ownerId && (
-          <div className="mt-4">
-            <SearchFilterBar value={search} onSearch={setSearch} placeholder="بحث داخل البيان أو نوع الحركة..." />
-          </div>
-        )}
-      </Card>
+      </WorkspaceSection>
 
       {report ? (
         <>
@@ -327,11 +330,24 @@ const OwnerLedgerReport: React.FC = () => {
             <SummaryStatCard title="بعد العمولة" value={formatCurrency(report.afterCommission)} icon={<BarChart3 size={18} />} color="emerald" />
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="border border-slate-100 dark:border-slate-800">
+          <div className="mt-4">
+            <Tabs
+              variant="pill"
+              tabs={[
+                { id: 'summary', label: 'ملخص وتحليل' },
+                { id: 'transactions', label: 'الحركات التفصيلية' },
+              ]}
+              activeTab={ledgerTab}
+              onChange={(id) => setLedgerTab(id as typeof ledgerTab)}
+            />
+          </div>
+
+          {ledgerTab === 'summary' && (
+            <>
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <WorkspaceSection title="العقود النشطة" description="إجمالي العقود الجارية على عقارات المالك.">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">العقود النشطة</p>
                   <p className="mt-2 text-3xl font-black text-slate-800 dark:text-slate-100">{report.activeContractsCount.toLocaleString('ar')}</p>
                 </div>
                 <div className="rounded-2xl bg-blue-50 p-3 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
@@ -339,12 +355,11 @@ const OwnerLedgerReport: React.FC = () => {
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">إجمالي العقود الجارية حاليًا على عقارات هذا المالك.</p>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="border border-slate-100 dark:border-slate-800">
+            <WorkspaceSection title="عقود قريبة من الانتهاء" description="عقود تحتاج متابعة خلال 45 يومًا.">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">العقود القريبة من الانتهاء</p>
                   <p className="mt-2 text-3xl font-black text-slate-800 dark:text-slate-100">{report.expiringContracts.length.toLocaleString('ar')}</p>
                 </div>
                 <div className="rounded-2xl bg-amber-50 p-3 text-amber-600 dark:bg-amber-500/10 dark:text-amber-300">
@@ -352,12 +367,11 @@ const OwnerLedgerReport: React.FC = () => {
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">عقود تحتاج تجديدًا أو متابعة خلال 45 يومًا.</p>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="border border-slate-100 dark:border-slate-800">
+            <WorkspaceSection title="الفواتير المتأخرة" description="فواتير غير مسددة تجاوزت تاريخ الاستحقاق.">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">الفواتير المتأخرة</p>
                   <p className="mt-2 text-3xl font-black text-slate-800 dark:text-slate-100">{report.overdueInvoices.length.toLocaleString('ar')}</p>
                 </div>
                 <div className="rounded-2xl bg-rose-50 p-3 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300">
@@ -365,12 +379,11 @@ const OwnerLedgerReport: React.FC = () => {
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">فواتير غير مسددة تجاوزت تاريخ الاستحقاق على عقارات المالك.</p>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="border border-slate-100 dark:border-slate-800">
+            <WorkspaceSection title="طلبات الصيانة المفتوحة" description="طلبات تحتاج متابعة تشغيلية أو مالية.">
               <div className="flex items-start justify-between">
                 <div>
-                  <p className="text-xs font-bold text-slate-500 dark:text-slate-400">طلبات الصيانة المفتوحة</p>
                   <p className="mt-2 text-3xl font-black text-slate-800 dark:text-slate-100">{report.openMaintenance.length.toLocaleString('ar')}</p>
                 </div>
                 <div className="rounded-2xl bg-emerald-50 p-3 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300">
@@ -378,13 +391,11 @@ const OwnerLedgerReport: React.FC = () => {
                 </div>
               </div>
               <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">طلبات تحتاج متابعة تشغيلية أو مالية على وحدات المالك.</p>
-            </Card>
+            </WorkspaceSection>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-            <Card className="border border-slate-100">
-              <h3 className="text-lg font-extrabold text-slate-800">مؤشرات التحليل السريع</h3>
-              <p className="mt-1 text-sm text-slate-500">تصور بصري للعلاقة بين إجمالي التحصيل، المصروفات، وعمولة المكتب.</p>
+            <WorkspaceSection title="مؤشرات التحليل السريع" description="تصور بصري للعلاقة بين إجمالي التحصيل، المصروفات، وعمولة المكتب.">
               <div className="mt-6 space-y-4">
                 {chartBars.map((bar) => (
                   <div key={bar.label} className="space-y-2">
@@ -398,10 +409,9 @@ const OwnerLedgerReport: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="border border-slate-100">
-              <h3 className="text-lg font-extrabold text-slate-800">ملخص الاتفاق مع المالك</h3>
+            <WorkspaceSection title="ملخص الاتفاق مع المالك" description="تفاصيل سريعة عن حجم المحفظة والاتفاق.">
               <div className="mt-5 grid gap-3 text-sm text-slate-600">
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>المالك</span><strong className="text-slate-800">{report.owner.name}</strong></div>
                 <div className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3"><span>عدد العقارات</span><strong className="text-slate-800">{report.properties.length.toLocaleString('ar')}</strong></div>
@@ -412,15 +422,13 @@ const OwnerLedgerReport: React.FC = () => {
                 <div className="flex items-center justify-between rounded-xl bg-blue-50 px-4 py-3"><span>عمولة المكتب المحتسبة</span><strong className="text-blue-700">{formatCurrency(report.officeShare)}</strong></div>
                 <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-4 py-3"><span>الرصيد النهائي بعد الخصم</span><strong className="text-emerald-700">{formatCurrency(report.outstandingBalance)}</strong></div>
               </div>
-            </Card>
+            </WorkspaceSection>
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border border-slate-100 dark:border-slate-800">
+            <WorkspaceSection title="التنبيهات التشغيلية" description="أهم ما يحتاج متابعة يومية قبل تحويل مستحقات المالك.">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">التنبيهات التشغيلية</h3>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">أهم ما يحتاج متابعة يومية قبل تحويل مستحقات المالك.</p>
                 </div>
                 <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   <ShieldAlert size={18} />
@@ -440,13 +448,11 @@ const OwnerLedgerReport: React.FC = () => {
                   <StatusPill status={report.openMaintenance.length > 0 ? 'info' : 'success'}>{report.openMaintenance.length > 0 ? `${report.openMaintenance.length.toLocaleString('ar')} طلب` : 'لا يوجد'}</StatusPill>
                 </div>
               </div>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="border border-slate-100 dark:border-slate-800">
+            <WorkspaceSection title="سجلات تحتاج انتباهًا" description="ملخص سريع لأقرب الاستحقاقات والحالات المفتوحة.">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">سجلات تحتاج انتباهًا</h3>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">ملخص سريع لأقرب الاستحقاقات والحالات المفتوحة.</p>
                 </div>
                 <div className="rounded-2xl bg-slate-100 p-3 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
                   <CalendarClock size={18} />
@@ -480,41 +486,41 @@ const OwnerLedgerReport: React.FC = () => {
                   </div>
                 ) : null}
               </div>
-            </Card>
+            </WorkspaceSection>
           </div>
+          </>
+          )}
 
-          <Card className="border border-slate-100 !p-0 overflow-hidden">
-            <div className="border-b border-slate-100 px-6 py-4">
-              <h3 className="text-lg font-extrabold text-slate-800">الحركات التفصيلية</h3>
-              <p className="mt-1 text-sm text-slate-500">يعرض الجدول التحصيل والمصروف والتسوية مع الرصيد قبل وبعد خصم العمولة.</p>
-            </div>
-            <TableWrapper>
-              <thead className="bg-slate-50">
-                <tr>
-                  <Th>التاريخ</Th>
-                  <Th>البيان</Th>
-                  <Th className="text-left">الإجمالي</Th>
-                  <Th className="text-left">عمولة المكتب</Th>
-                  <Th className="text-left">صافي المالك</Th>
-                  <Th className="text-left">الرصيد قبل العمولة</Th>
-                  <Th className="text-left">الرصيد بعد العمولة</Th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {report.transactions.map((tx) => (
-                  <Tr key={`${tx.type}-${tx.id}`}>
-                    <Td>{formatDate(tx.date)}</Td>
-                    <Td className="max-w-[320px] text-sm text-slate-700">{tx.label}</Td>
-                    <Td className={`text-left font-mono font-bold ${tx.gross >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>{formatCurrency(tx.gross)}</Td>
-                    <Td className="text-left font-mono font-bold text-amber-600">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction) : '—'}</Td>
-                    <Td className="text-left font-mono font-bold text-emerald-700">{formatCurrency(tx.ownerNet)}</Td>
-                    <Td className="text-left font-mono">{formatCurrency(tx.runningBefore)}</Td>
-                    <Td className="text-left font-mono font-bold">{formatCurrency(tx.runningAfter)}</Td>
-                  </Tr>
-                ))}
-              </tbody>
-            </TableWrapper>
-          </Card>
+          {ledgerTab === 'transactions' && (
+            <WorkspaceSection title="الحركات التفصيلية" description="يعرض الجدول التحصيل والمصروف والتسوية مع الرصيد قبل وبعد خصم العمولة.">
+              <TableWrapper>
+                <thead className="bg-slate-50">
+                  <tr>
+                    <Th>التاريخ</Th>
+                    <Th>البيان</Th>
+                    <Th className="text-left">الإجمالي</Th>
+                    <Th className="text-left">عمولة المكتب</Th>
+                    <Th className="text-left">صافي المالك</Th>
+                    <Th className="text-left">الرصيد قبل العمولة</Th>
+                    <Th className="text-left">الرصيد بعد العمولة</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {report.transactions.map((tx) => (
+                    <Tr key={`${tx.type}-${tx.id}`}>
+                      <Td>{formatDate(tx.date)}</Td>
+                      <Td className="max-w-[320px] text-sm text-slate-700">{tx.label}</Td>
+                      <Td className={`text-left font-mono font-bold ${tx.gross >= 0 ? 'text-blue-700' : 'text-rose-600'}`}>{formatCurrency(tx.gross)}</Td>
+                      <Td className="text-left font-mono font-bold text-amber-600">{tx.commissionDeduction ? formatCurrency(tx.commissionDeduction) : '—'}</Td>
+                      <Td className="text-left font-mono font-bold text-emerald-700">{formatCurrency(tx.ownerNet)}</Td>
+                      <Td className="text-left font-mono">{formatCurrency(tx.runningBefore)}</Td>
+                      <Td className="text-left font-mono font-bold">{formatCurrency(tx.runningAfter)}</Td>
+                    </Tr>
+                  ))}
+                </tbody>
+              </TableWrapper>
+            </WorkspaceSection>
+          )}
 
           <PrintPreviewModal
             isOpen={isPrintPreviewOpen}

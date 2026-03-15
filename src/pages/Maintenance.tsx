@@ -3,7 +3,6 @@ import { toast } from 'react-hot-toast';
 import { AlertTriangle, Clock, DollarSign, PlusCircle, Wrench } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { MaintenanceRecord } from '../types';
-import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import PageHeader from '../components/ui/PageHeader';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
@@ -17,6 +16,8 @@ import ConfirmDialog from '../components/shared/ConfirmDialog';
 import { MaintenancePrintable } from '../components/print/MaintenancePrintable';
 import { exportMaintenanceRecordToPdf } from '../services/pdfService';
 import { formatCurrency, formatDate } from '../utils/helpers';
+import FormSection from '../components/ui/FormSection';
+import WorkspaceSection from '../components/ui/WorkspaceSection';
 
 const primaryButtonCls =
   'inline-flex items-center justify-center gap-2 rounded-2xl bg-blue-500 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-600';
@@ -233,14 +234,16 @@ const Maintenance: React.FC = () => {
         <SummaryStatCard label="تكاليف غير مرحّلة" value={formatCurrency(summaryData.unbilledCost, db.settings?.currency || 'OMR')} icon={<DollarSign size={24} />} color={summaryData.unbilledCost > 0 ? 'warning' : 'success'} />
       </div>
 
-      <Card className="p-4 sm:p-5">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100">طلبات الصيانة</h2>
+      <WorkspaceSection
+        title="طلبات الصيانة"
+        description="تابع الطلبات التشغيلية وربطها بالعقود والوحدات والقيود المالية."
+        actions={
           <button type="button" onClick={() => handleOpenModal()} className={primaryButtonCls}>
             <PlusCircle size={16} />
             إضافة طلب صيانة
           </button>
-        </div>
+        }
+      >
 
         <SearchFilterBar
           value={searchTerm}
@@ -345,25 +348,24 @@ const Maintenance: React.FC = () => {
             <p className="mt-2 text-sm text-slate-500 dark:text-slate-400">أضف أول طلب صيانة للبدء في المتابعة.</p>
           </div>
         )}
-      </Card>
+      </WorkspaceSection>
 
       {selectedRecord && maintenanceWorkspace ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.05fr_0.95fr]">
-          <Card className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">ملف طلب الصيانة</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">متابعة التشغيلي والمالي والسياق المرتبط بالطلب المحدد.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+          <WorkspaceSection
+            title="ملف طلب الصيانة"
+            description="متابعة التشغيلي والمالي والسياق المرتبط بالطلب المحدد."
+            actions={
+              <>
                 <button type="button" onClick={() => handleOpenModal(selectedRecord)} className={ghostButtonCls}>
                   تعديل
                 </button>
                 <button type="button" onClick={() => setPrintingRecord(selectedRecord)} className={primaryButtonCls}>
                   طباعة
                 </button>
-              </div>
-            </div>
+              </>
+            }
+          >
 
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryStatCard label="رقم الطلب" value={selectedRecord.no || '—'} icon={<Wrench size={18} />} color="slate" />
@@ -393,12 +395,11 @@ const Maintenance: React.FC = () => {
                 </div>
               </div>
             </div>
-          </Card>
+          </WorkspaceSection>
 
           <div className="space-y-4">
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">تنبيهات الصيانة</h3>
-              <div className="mt-4 space-y-3">
+            <WorkspaceSection title="تنبيهات الصيانة">
+              <div className="space-y-3">
                 <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
                   {selectedRecord.isAging ? 'هذا الطلب متأخر ويحتاج متابعة تشغيلية عاجلة.' : 'الطلب ضمن الإطار التشغيلي الحالي.'}
                 </div>
@@ -408,14 +409,11 @@ const Maintenance: React.FC = () => {
                     : 'الربط المالي للحالة الحالية سليم.'}
                 </div>
               </div>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">المرفقات والطباعة</h3>
-              <div className="mt-4">
-                <AttachmentsManager entityType="MAINTENANCE" entityId={selectedRecord.id} />
-              </div>
-            </Card>
+            <WorkspaceSection title="المرفقات والطباعة">
+              <AttachmentsManager entityType="MAINTENANCE" entityId={selectedRecord.id} />
+            </WorkspaceSection>
           </div>
         </div>
       ) : null}
@@ -643,7 +641,7 @@ const MaintenanceForm: React.FC<{
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={record ? 'تعديل طلب صيانة' : 'إضافة طلب صيانة'}>
       <form onSubmit={handleSubmit} className="space-y-5">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormSection title="الربط التشغيلي" description="حدد الوحدة المرتبطة وتاريخ الطلب." columns={2}>
           <div>
             <label className={labelCls}>الوحدة</label>
             <select className={inputCls} name="unitId" value={formData.unitId || ''} onChange={handleChange} required>
@@ -662,34 +660,36 @@ const MaintenanceForm: React.FC<{
             <label className={labelCls}>تاريخ الطلب</label>
             <input className={inputCls} name="requestDate" type="date" value={formData.requestDate || ''} onChange={handleChange} required />
           </div>
-        </div>
+        </FormSection>
 
-        <div>
-          <label className={labelCls}>عنوان المشكلة</label>
-          <input
-            className={inputCls}
-            name="issueTitle"
-            value={formData.issueTitle || ''}
-            onChange={handleChange}
-            required
-            placeholder="مثال: تسريب في المطبخ"
-          />
-        </div>
+        <FormSection title="تفاصيل المشكلة" description="اكتب عنوانًا واضحًا ووصفًا موجزًا للمشكلة." columns={1}>
+          <div>
+            <label className={labelCls}>عنوان المشكلة</label>
+            <input
+              className={inputCls}
+              name="issueTitle"
+              value={formData.issueTitle || ''}
+              onChange={handleChange}
+              required
+              placeholder="مثال: تسريب في المطبخ"
+            />
+          </div>
 
-        <div>
-          <label className={labelCls}>وصف الطلب</label>
-          <textarea
-            className={`${inputCls} min-h-[110px]`}
-            name="description"
-            value={formData.description || ''}
-            onChange={handleChange}
-            required
-            rows={3}
-            placeholder="اكتب وصفًا واضحًا للمشكلة أو الأعمال المطلوبة"
-          />
-        </div>
+          <div>
+            <label className={labelCls}>وصف الطلب</label>
+            <textarea
+              className={`${inputCls} min-h-[110px]`}
+              name="description"
+              value={formData.description || ''}
+              onChange={handleChange}
+              required
+              rows={3}
+              placeholder="اكتب وصفًا واضحًا للمشكلة أو الأعمال المطلوبة"
+            />
+          </div>
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <FormSection title="المالية والحالة" description="حدد تكلفة الطلب وجهة التحميل." columns={3}>
           <div>
             <label className={labelCls}>الحالة</label>
             <select className={inputCls} name="status" value={formData.status || 'NEW'} onChange={handleChange}>
@@ -724,7 +724,7 @@ const MaintenanceForm: React.FC<{
               <option value="TENANT">المستأجر</option>
             </select>
           </div>
-        </div>
+        </FormSection>
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
           <button type="button" onClick={onClose} className={ghostButtonCls}>

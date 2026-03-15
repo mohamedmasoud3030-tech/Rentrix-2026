@@ -4,10 +4,11 @@ import { AlertTriangle, BadgeDollarSign, Building2, History, KeyRound, Lock, Shi
 import { toast } from 'react-hot-toast';
 import { useApp } from '../contexts/AppContext';
 import PageHeader from '../components/ui/PageHeader';
-import Card from '../components/ui/Card';
 import Tabs from '../components/ui/Tabs';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
 import Modal from '../components/ui/Modal';
+import WorkspaceSection from '../components/ui/WorkspaceSection';
+import FormSection from '../components/ui/FormSection';
 
 const inputCls =
   'w-full rounded-2xl border border-slate-200/80 bg-white/85 px-4 py-3 text-sm text-slate-800 placeholder:text-slate-400 shadow-sm transition-all duration-150 focus:border-sky-400 focus:bg-white focus:outline-none focus:ring-4 focus:ring-sky-500/10 dark:border-slate-700 dark:bg-slate-900/85 dark:text-slate-100 dark:placeholder:text-slate-500';
@@ -26,7 +27,7 @@ const SettingsPage: React.FC = () => {
     <div className="space-y-8" dir="rtl">
       <PageHeader title="إعدادات النظام" description="إدارة هوية المؤسسة والسياسات المالية وقواعد العمل ومسار النسخ الاحتياطي من شاشة موحدة." />
 
-      <Card className="space-y-6 p-6 md:p-8">
+      <WorkspaceSection title="تصنيفات الإعدادات" description="تنظيم إعدادات المؤسسة والمالية والنسخ الاحتياطي في أقسام واضحة.">
         <Tabs
           variant="pill"
           tabs={[
@@ -45,7 +46,7 @@ const SettingsPage: React.FC = () => {
         {activeTab === 'financial' && <FinancialSettings />}
         {activeTab === 'backup' && <BackupSettings />}
         {activeTab === 'rules' && <RulesSettings />}
-      </Card>
+      </WorkspaceSection>
     </div>
   );
 };
@@ -74,17 +75,16 @@ const AccessSettings: React.FC = () => {
         <SummaryStatCard icon={<UserCog size={18} />} color="slate" title="أنماط الصلاحيات" value={stats.roles.toLocaleString('ar')} />
       </div>
 
-      <div className="rounded-[28px] border border-slate-200/70 bg-white/88 p-6 shadow-[0_18px_40px_rgba(148,163,184,0.10)] dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">إدارة الوصول</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400">
+      <WorkspaceSection title="إدارة الوصول" description="متابعة صلاحيات المستخدمين وإدارة الحسابات من مركز الموارد البشرية.">
+        <div className="text-sm leading-6 text-slate-500 dark:text-slate-400">
           تم توحيد إدارة المستخدمين داخل صفحة الموارد البشرية لمنع تكرار التدفق. من هنا يمكنك مراجعة الحالة العامة ثم الانتقال إلى الإدارة التفصيلية.
-        </p>
+        </div>
         <div className="mt-5 flex justify-end">
           <button type="button" onClick={() => navigate('/hr')} className={buttonPrimary}>
             فتح إدارة المستخدمين
           </button>
         </div>
-      </div>
+      </WorkspaceSection>
     </div>
   );
 };
@@ -123,7 +123,7 @@ const CompanySettings: React.FC = () => {
         <SummaryStatCard icon={<ShieldCheck size={18} />} color="amber" title="تكامل Google Drive" value={data.googleClientId ? 'مفعل' : 'غير مكتمل'} subtext="يتطلب Google Client ID" />
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <FormSection title="هوية المؤسسة" description="البيانات الأساسية التي تظهر في التقارير والمستندات الرسمية.">
         <div>
           <label className={labelCls}>اسم المؤسسة</label>
           <input className={inputCls} value={data.name || ''} onChange={(e) => setData({ ...data, name: e.target.value })} />
@@ -140,6 +140,8 @@ const CompanySettings: React.FC = () => {
           <label className={labelCls}>العنوان</label>
           <input className={inputCls} value={data.address || ''} onChange={(e) => setData({ ...data, address: e.target.value })} />
         </div>
+      </FormSection>
+      <FormSection title="الهوية البصرية والربط" description="إعدادات الشعار وربط Google Drive." columns={2}>
         <div>
           <label className={labelCls}>Google Client ID</label>
           <input className={inputCls} value={data.googleClientId || ''} onChange={(e) => setData({ ...data, googleClientId: e.target.value })} />
@@ -148,7 +150,7 @@ const CompanySettings: React.FC = () => {
           <label className={labelCls}>رابط أو بيانات الشعار</label>
           <input className={inputCls} value={data.logoDataUrl || data.logo || ''} onChange={(e) => setData({ ...data, logoDataUrl: e.target.value, logo: e.target.value })} />
         </div>
-      </div>
+      </FormSection>
 
       <div className="flex justify-end">
         <button type="button" onClick={handleSave} className={buttonPrimary}>حفظ بيانات المؤسسة</button>
@@ -202,8 +204,8 @@ const FinancialSettings: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.25fr_0.9fr]">
-        <div className="rounded-[28px] border border-slate-200/70 bg-white/88 p-5 shadow-[0_18px_40px_rgba(148,163,184,0.10)] dark:border-slate-800 dark:bg-slate-900">
-          <div className="mb-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+        <WorkspaceSection title="الإعدادات المالية" description="العملة والضرائب والتنبيهات التشغيلية المرتبطة بالعقود.">
+          <FormSection title="العملة والضريبة" description="القيم الأساسية التي تُستخدم في الفواتير والتقارير.">
             <div>
               <label className={labelCls}>العملة الأساسية</label>
               <select className={inputCls} value={currency} onChange={(e) => setCurrency(e.target.value)}>
@@ -216,26 +218,29 @@ const FinancialSettings: React.FC = () => {
               <label className={labelCls}>نسبة الضريبة (%)</label>
               <input className={inputCls} type="number" min="0" step="0.1" value={taxRate} onChange={(e) => setTaxRate(Number(e.target.value))} />
             </div>
+          </FormSection>
+          <FormSection title="تنبيهات العقود" description="إعدادات تفعيل التنبيه قبل انتهاء العقود.">
             <div>
               <label className={labelCls}>تنبيه انتهاء العقود (بالأيام)</label>
               <input className={inputCls} type="number" min="1" value={contractAlertDays} onChange={(e) => setContractAlertDays(Number(e.target.value))} />
             </div>
-          </div>
+          </FormSection>
           <div className="flex justify-end">
             <button type="button" onClick={handleSave} className={buttonPrimary}>حفظ الإعدادات المالية</button>
           </div>
-        </div>
+        </WorkspaceSection>
 
-        <div className="rounded-[28px] border border-amber-200 bg-amber-50/70 p-5 shadow-[0_18px_40px_rgba(251,191,36,0.10)] dark:border-amber-500/20 dark:bg-amber-500/10">
+        <WorkspaceSection
+          title="قفل الفترة المحاسبية"
+          description="عند تفعيل القفل لن يتمكن المستخدمون من إضافة أو تعديل الحركات المالية السابقة لهذا التاريخ."
+          className="border-amber-200 bg-amber-50/70 dark:border-amber-500/20 dark:bg-amber-500/10"
+        >
           <div className="flex items-start gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300">
               <AlertTriangle size={18} />
             </div>
-            <div>
-              <h2 className="text-lg font-extrabold text-amber-900 dark:text-amber-200">قفل الفترة المحاسبية</h2>
-              <p className="mt-1 text-sm leading-6 text-amber-800/80 dark:text-amber-200/80">
-                عند تفعيل القفل لن يتمكن المستخدمون من إضافة أو تعديل الحركات المالية السابقة لهذا التاريخ.
-              </p>
+            <div className="text-sm leading-6 text-amber-800/80 dark:text-amber-200/80">
+              تأكد من مراجعة جميع القيود المالية قبل الإقفال.
             </div>
           </div>
           <div className="mt-5">
@@ -246,7 +251,7 @@ const FinancialSettings: React.FC = () => {
             <button type="button" onClick={() => updateGovernance({ financialLockDate: null, isLocked: false })} className={buttonSecondary}>إلغاء القفل</button>
             <button type="button" onClick={() => setConfirmOpen(true)} className={buttonDanger}>تأكيد القفل</button>
           </div>
-        </div>
+        </WorkspaceSection>
       </div>
 
       <Modal isOpen={confirmOpen} onClose={() => setConfirmOpen(false)} title="تأكيد قفل الفترة المحاسبية">
@@ -275,15 +280,16 @@ const BackupSettings: React.FC = () => {
         <SummaryStatCard icon={<Wallet size={18} />} color="blue" title="آخر نسخة احتياطية" value={lastBackup ? new Date(lastBackup.date || Date.now()).toLocaleDateString('ar') : '—'} subtext="تاريخ آخر ملف نسخ احتياطي" />
         <SummaryStatCard icon={<History size={18} />} color="emerald" title="عدد النسخ" value={db?.backups?.length?.toLocaleString('ar') || '0'} subtext="إجمالي الملفات المحفوظة" />
       </div>
-      <div className="rounded-[28px] border border-slate-200/70 bg-white/88 p-6 shadow-[0_18px_40px_rgba(148,163,184,0.10)] dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="mb-2 text-xl font-extrabold text-slate-800 dark:text-slate-100">مركز النسخ الاحتياطي والاستعادة</h2>
-        <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">
+      <WorkspaceSection title="مركز النسخ الاحتياطي والاستعادة" description="إدارة النسخ والربط مع Google Drive من صفحة النسخ الاحتياطي الرئيسية.">
+        <div className="text-sm text-slate-600 dark:text-slate-400">
           تم توحيد عمليات النسخ والاستعادة والمسح والربط مع Google Drive داخل صفحة النسخ الاحتياطي الفعلية فقط. لا توجد أزرار شكلية هنا.
-        </p>
-        <button type="button" className={buttonPrimary} onClick={() => navigate('/backup')}>
-          فتح صفحة النسخ الاحتياطي
-        </button>
-      </div>
+        </div>
+        <div className="mt-4">
+          <button type="button" className={buttonPrimary} onClick={() => navigate('/backup')}>
+            فتح صفحة النسخ الاحتياطي
+          </button>
+        </div>
+      </WorkspaceSection>
     </div>
   );
 };
@@ -305,18 +311,16 @@ const RulesSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <div className="rounded-[28px] border border-slate-200/70 bg-white/88 p-6 shadow-[0_18px_40px_rgba(148,163,184,0.10)] dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="mb-2 text-lg font-extrabold text-slate-800 dark:text-slate-100">فترة السماح على الفواتير</h3>
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">عدد الأيام المسموح بها بعد تاريخ الاستحقاق قبل تطبيق غرامة تأخير.</p>
+      <FormSection title="قواعد الفواتير" description="السياسات التي تتحكم في الغرامات وفترة السماح." columns={2}>
+        <div>
+          <label className={labelCls}>فترة السماح على الفواتير</label>
           <input className={inputCls} type="number" min={0} value={invoiceGraceDays} onChange={(e) => setInvoiceGraceDays(Number(e.target.value))} />
         </div>
-        <div className="rounded-[28px] border border-slate-200/70 bg-white/88 p-6 shadow-[0_18px_40px_rgba(148,163,184,0.10)] dark:border-slate-800 dark:bg-slate-900">
-          <h3 className="mb-2 text-lg font-extrabold text-slate-800 dark:text-slate-100">الحد الأقصى لغرامات التأخير (%)</h3>
-          <p className="mb-4 text-sm text-slate-600 dark:text-slate-400">نسبة الغرامة القصوى التي يمكن تطبيقها على المتأخرات.</p>
+        <div>
+          <label className={labelCls}>الحد الأقصى لغرامات التأخير (%)</label>
           <input className={inputCls} type="number" min={0} max={100} value={maxLateFees} onChange={(e) => setMaxLateFees(Number(e.target.value))} />
         </div>
-      </div>
+      </FormSection>
       <div className="flex justify-end">
         <button type="button" className={buttonPrimary} onClick={handleSave}>حفظ قواعد النظام</button>
       </div>

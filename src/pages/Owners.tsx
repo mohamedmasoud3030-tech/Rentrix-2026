@@ -28,6 +28,7 @@ import AttachmentsManager from '../components/shared/AttachmentsManager';
 import DirectoryCard from '../components/ui/DirectoryCard';
 import WorkspaceSection from '../components/ui/WorkspaceSection';
 import FormSection from '../components/ui/FormSection';
+import Tabs from '../components/ui/Tabs';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 interface OwnerRow {
@@ -71,6 +72,7 @@ const Owners: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOwnerId, setSelectedOwnerId] = useState('');
+  const [ownerTab, setOwnerTab] = useState<'overview' | 'finance' | 'contracts' | 'services' | 'documents'>('overview');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingOwner, setEditingOwner] = useState<OwnerRow | null>(null);
   const [ownerToDelete, setOwnerToDelete] = useState<OwnerRow | null>(null);
@@ -87,6 +89,10 @@ const Owners: React.FC = () => {
   useEffect(() => {
     void fetchOwners();
   }, []);
+
+  useEffect(() => {
+    setOwnerTab('overview');
+  }, [selectedOwnerId]);
 
   const fetchOwners = async () => {
     try {
@@ -296,42 +302,199 @@ const Owners: React.FC = () => {
 
       {selectedOwner && ownerWorkspace && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-          <Card className="p-6">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل المالك</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">ملف موحد يربط الأصول، العقود، التحصيلات، الصيانة، والتنبيهات الحرجة.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+          <WorkspaceSection
+            title="مساحة عمل المالك"
+            description="ملف موحد يربط الأصول، العقود، التحصيلات، الصيانة، والتنبيهات الحرجة."
+            actions={
+              <>
                 <button type="button" onClick={() => navigate(`/owner-ledger?ownerId=${selectedOwner.id}`)} className={ghostButton}><Printer size={15} /> كشف الحساب</button>
                 <button type="button" onClick={() => navigate('/reports?tab=owners')} className={ghostButton}>تقارير الملاك</button>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+              </>
+            }
+          >
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
               <SummaryStatCard icon={<Building2 size={18} />} color="blue" title="العقارات" value={ownerWorkspace.properties.length.toLocaleString('ar')} />
               <SummaryStatCard icon={<Users size={18} />} color="slate" title="الوحدات" value={ownerWorkspace.units.length.toLocaleString('ar')} />
               <SummaryStatCard icon={<Mail size={18} />} color="amber" title="العقود" value={ownerWorkspace.contracts.length.toLocaleString('ar')} />
               <SummaryStatCard icon={<Wallet size={18} />} color="emerald" title="الرصيد" value={formatCurrency(ownerWorkspace.balance?.net || 0)} />
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-              <WorkspaceSection title="الملف التعريفي" description="بيانات المالك الأساسية واتفاق التشغيل المعتمد."><div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200"><div><strong>الاسم:</strong> {selectedOwner.name}</div><div><strong>الهاتف:</strong> {selectedOwner.phone || '—'}</div><div><strong>البريد:</strong> {selectedOwner.email || '—'}</div><div><strong>الاتفاق:</strong> {agreementLabel(selectedOwner)}</div></div></WorkspaceSection>
-              <WorkspaceSection title="الملخص المالي" description="تحصيلات ومصروفات وتسويات تخص محفظة هذا المالك."><div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200"><div><strong>التحصيلات:</strong> {formatCurrency(ownerWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div><div><strong>المصروفات:</strong> {formatCurrency(ownerWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div><div><strong>التسويات:</strong> {formatCurrency(ownerWorkspace.settlements.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div><div><strong>صيانة مفتوحة:</strong> {ownerWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</div></div></WorkspaceSection>
+            <div className="mt-5">
+              <Tabs
+                variant="pill"
+                tabs={[
+                  { id: 'overview', label: 'نظرة عامة' },
+                  { id: 'finance', label: 'المالية' },
+                  { id: 'contracts', label: 'العقود' },
+                  { id: 'services', label: 'الخدمات' },
+                  { id: 'documents', label: 'المستندات' },
+                ]}
+                activeTab={ownerTab}
+                onChange={(id) => setOwnerTab(id as typeof ownerTab)}
+              />
             </div>
 
-            <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <WorkspaceSection title="فواتير تحتاج متابعة" description="أبرز الفواتير المتأخرة المرتبطة بعقارات المالك."><div className="space-y-2">{ownerWorkspace.overdueInvoices.slice(0, 4).map((invoice) => (<button type="button" key={invoice.id} onClick={() => navigate('/invoices')} className="flex w-full items-center justify-between rounded-2xl bg-white/85 px-3 py-2.5 text-right text-sm dark:bg-slate-900/70"><span className="min-w-0"><span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span><span className="block truncate text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span></span><span className="font-extrabold text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0))}</span></button>))}{!ownerWorkspace.overdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير متأخرة على عقارات هذا المالك.</div>}</div></WorkspaceSection>
-              <WorkspaceSection title="عقود تقترب من الانتهاء" description="العقود النشطة التي تنتهي خلال ثلاثين يومًا."><div className="space-y-2">{ownerWorkspace.expiringContracts.map((contract) => (<button type="button" key={contract.id} onClick={() => navigate('/contracts')} className="flex w-full items-center justify-between rounded-2xl bg-white/85 px-3 py-2.5 text-right text-sm dark:bg-slate-900/70"><span className="min-w-0"><span className="block font-bold text-slate-800 dark:text-slate-100">{formatDate(contract.end)}</span><span className="block truncate text-xs text-slate-500 dark:text-slate-400">{db.tenants.find((tenant) => tenant.id === contract.tenantId)?.name || db.tenants.find((tenant) => tenant.id === contract.tenantId)?.fullName || 'مستأجر غير محدد'}</span></span><span className="font-extrabold text-amber-600 dark:text-amber-300">{formatCurrency(contract.rent || 0)}</span></button>))}{!ownerWorkspace.expiringContracts.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد عقود قاربت على الانتهاء خلال 30 يومًا.</div>}</div></WorkspaceSection>
-            </div>
+            {ownerTab === 'overview' && (
+              <>
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <WorkspaceSection title="الملف التعريفي" description="بيانات المالك الأساسية واتفاق التشغيل المعتمد.">
+                    <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
+                      <div><strong>الاسم:</strong> {selectedOwner.name}</div>
+                      <div><strong>الهاتف:</strong> {selectedOwner.phone || '—'}</div>
+                      <div><strong>البريد:</strong> {selectedOwner.email || '—'}</div>
+                      <div><strong>الاتفاق:</strong> {agreementLabel(selectedOwner)}</div>
+                    </div>
+                  </WorkspaceSection>
+                  <WorkspaceSection title="الملخص التشغيلي" description="قراءة سريعة للحالة التشغيلية والأصول.">
+                    <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
+                      <div><strong>العقارات:</strong> {ownerWorkspace.properties.length.toLocaleString('ar')}</div>
+                      <div><strong>الوحدات:</strong> {ownerWorkspace.units.length.toLocaleString('ar')}</div>
+                      <div><strong>العقود النشطة:</strong> {ownerWorkspace.contracts.filter((contract) => contract.status === 'ACTIVE').length.toLocaleString('ar')}</div>
+                      <div><strong>صيانة مفتوحة:</strong> {ownerWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</div>
+                    </div>
+                  </WorkspaceSection>
+                </div>
 
-            <WorkspaceSection title="العقارات المرتبطة" description="عرض سريع للعقارات التابعة لهذا المالك مع حجم التشغيل بكل عقار." className="mt-6"><div className="grid grid-cols-1 gap-3 md:grid-cols-2">{ownerWorkspace.properties.map((property) => { const propertyUnits = ownerWorkspace.units.filter((unit) => unit.propertyId === property.id); const propertyContracts = ownerWorkspace.contracts.filter((contract) => propertyUnits.some((unit) => unit.id === contract.unitId)); const openMaintenance = ownerWorkspace.maintenance.filter((record) => record.propertyId === property.id && ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)).length; return (<div key={property.id} className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:border-slate-800 dark:bg-slate-900/70"><div className="flex items-center justify-between gap-3"><div><div className="font-bold text-slate-900 dark:text-slate-100">{property.name}</div><div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{property.city || property.district || 'بدون موقع مفصل'}</div></div><button type="button" onClick={() => navigate('/properties')} className="text-sm font-bold text-blue-600 dark:text-blue-300">فتح السجل</button></div><div className="mt-4 grid grid-cols-3 gap-2"><div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80"><div className="text-[11px] font-bold text-slate-500">الوحدات</div><div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{propertyUnits.length.toLocaleString('ar')}</div></div><div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80"><div className="text-[11px] font-bold text-slate-500">العقود</div><div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{propertyContracts.length.toLocaleString('ar')}</div></div><div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80"><div className="text-[11px] font-bold text-slate-500">المتابعة</div><div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{openMaintenance.toLocaleString('ar')}</div></div></div></div>); })}</div></WorkspaceSection>
-          </Card>
+                <WorkspaceSection title="العقارات المرتبطة" description="عرض سريع للعقارات التابعة لهذا المالك مع حجم التشغيل بكل عقار." className="mt-6">
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    {ownerWorkspace.properties.map((property) => {
+                      const propertyUnits = ownerWorkspace.units.filter((unit) => unit.propertyId === property.id);
+                      const propertyContracts = ownerWorkspace.contracts.filter((contract) => propertyUnits.some((unit) => unit.id === contract.unitId));
+                      const openMaintenance = ownerWorkspace.maintenance.filter((record) => record.propertyId === property.id && ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)).length;
+                      return (
+                        <div key={property.id} className="rounded-2xl border border-slate-200/80 bg-white/90 p-4 dark:border-slate-800 dark:bg-slate-900/70">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="font-bold text-slate-900 dark:text-slate-100">{property.name}</div>
+                              <div className="mt-1 text-xs text-slate-500 dark:text-slate-400">{property.city || property.district || 'بدون موقع مفصل'}</div>
+                            </div>
+                            <button type="button" onClick={() => navigate('/properties')} className="text-sm font-bold text-blue-600 dark:text-blue-300">فتح السجل</button>
+                          </div>
+                          <div className="mt-4 grid grid-cols-3 gap-2">
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80">
+                              <div className="text-[11px] font-bold text-slate-500">الوحدات</div>
+                              <div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{propertyUnits.length.toLocaleString('ar')}</div>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80">
+                              <div className="text-[11px] font-bold text-slate-500">العقود</div>
+                              <div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{propertyContracts.length.toLocaleString('ar')}</div>
+                            </div>
+                            <div className="rounded-2xl bg-slate-50 px-3 py-2 text-center dark:bg-slate-800/80">
+                              <div className="text-[11px] font-bold text-slate-500">المتابعة</div>
+                              <div className="mt-1 font-extrabold text-slate-900 dark:text-slate-100">{openMaintenance.toLocaleString('ar')}</div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </WorkspaceSection>
+              </>
+            )}
+
+            {ownerTab === 'finance' && (
+              <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <WorkspaceSection title="الملخص المالي" description="تحصيلات ومصروفات وتسويات تخص محفظة هذا المالك.">
+                  <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
+                    <div><strong>التحصيلات:</strong> {formatCurrency(ownerWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div>
+                    <div><strong>المصروفات:</strong> {formatCurrency(ownerWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div>
+                    <div><strong>التسويات:</strong> {formatCurrency(ownerWorkspace.settlements.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</div>
+                    <div><strong>صافي الرصيد:</strong> {formatCurrency(ownerWorkspace.balance?.net || 0)}</div>
+                  </div>
+                </WorkspaceSection>
+                <WorkspaceSection title="فواتير تحتاج متابعة" description="أبرز الفواتير المتأخرة المرتبطة بعقارات المالك.">
+                  <div className="space-y-2">
+                    {ownerWorkspace.overdueInvoices.slice(0, 4).map((invoice) => (
+                      <button type="button" key={invoice.id} onClick={() => navigate('/invoices')} className="flex w-full items-center justify-between rounded-2xl bg-white/85 px-3 py-2.5 text-right text-sm dark:bg-slate-900/70">
+                        <span className="min-w-0">
+                          <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                          <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span>
+                        </span>
+                        <span className="font-extrabold text-rose-600 dark:text-rose-300">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0))}</span>
+                      </button>
+                    ))}
+                    {!ownerWorkspace.overdueInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير متأخرة على عقارات هذا المالك.</div>}
+                  </div>
+                </WorkspaceSection>
+              </div>
+            )}
+
+            {ownerTab === 'contracts' && (
+              <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <WorkspaceSection title="عقود تقترب من الانتهاء" description="العقود النشطة التي تنتهي خلال ثلاثين يومًا.">
+                  <div className="space-y-2">
+                    {ownerWorkspace.expiringContracts.map((contract) => (
+                      <button type="button" key={contract.id} onClick={() => navigate('/contracts')} className="flex w-full items-center justify-between rounded-2xl bg-white/85 px-3 py-2.5 text-right text-sm dark:bg-slate-900/70">
+                        <span className="min-w-0">
+                          <span className="block font-bold text-slate-800 dark:text-slate-100">{formatDate(contract.end)}</span>
+                          <span className="block truncate text-xs text-slate-500 dark:text-slate-400">{db.tenants.find((tenant) => tenant.id === contract.tenantId)?.name || db.tenants.find((tenant) => tenant.id === contract.tenantId)?.fullName || 'مستأجر غير محدد'}</span>
+                        </span>
+                        <span className="font-extrabold text-amber-600 dark:text-amber-300">{formatCurrency(contract.rent || 0)}</span>
+                      </button>
+                    ))}
+                    {!ownerWorkspace.expiringContracts.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد عقود قاربت على الانتهاء خلال 30 يومًا.</div>}
+                  </div>
+                </WorkspaceSection>
+                <WorkspaceSection title="نظرة على العقود" description="إجمالي العقود ومؤشرات المتابعة.">
+                  <div className="grid gap-3 text-sm text-slate-700 dark:text-slate-200">
+                    <div><strong>إجمالي العقود:</strong> {ownerWorkspace.contracts.length.toLocaleString('ar')}</div>
+                    <div><strong>عقود نشطة:</strong> {ownerWorkspace.contracts.filter((contract) => contract.status === 'ACTIVE').length.toLocaleString('ar')}</div>
+                    <div><strong>عقود منتهية:</strong> {ownerWorkspace.contracts.filter((contract) => contract.status !== 'ACTIVE').length.toLocaleString('ar')}</div>
+                  </div>
+                </WorkspaceSection>
+              </div>
+            )}
+
+            {ownerTab === 'services' && (
+              <div className="mt-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                <WorkspaceSection title="متابعة الخدمات" description="مصروفات الخدمات والملاحظات الحرجة على محفظة المالك.">
+                  <div className="grid gap-2">
+                    <div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>مصروفات الخدمات</span><strong>{formatCurrency(ownerWorkspace.utilityExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</strong></div>
+                    <div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>فواتير متأخرة</span><strong>{ownerWorkspace.overdueInvoices.length.toLocaleString('ar')}</strong></div>
+                    <div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>طلبات صيانة مفتوحة</span><strong>{ownerWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</strong></div>
+                  </div>
+                </WorkspaceSection>
+                <WorkspaceSection title="آخر طلبات الصيانة" description="أحدث الطلبات المسجلة على عقارات ووحدات هذا المالك.">
+                  <div className="space-y-2">
+                    {ownerWorkspace.maintenance.slice(0, 4).map((record) => (
+                      <div key={record.id} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
+                        <span className="flex items-center gap-2"><Wrench size={14} className="text-amber-500" />{record.description || record.issueTitle || 'طلب صيانة'}</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-300">{record.status}</span>
+                      </div>
+                    ))}
+                    {!ownerWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد طلبات صيانة مرتبطة بهذا المالك.</div>}
+                  </div>
+                </WorkspaceSection>
+              </div>
+            )}
+
+            {ownerTab === 'documents' && (
+              <div className="mt-6">
+                <WorkspaceSection title="الوثائق والمرفقات" description="مستندات المالك وملفات الدعم المرتبطة بالملف.">
+                  <AttachmentsManager entityType="owner" entityId={selectedOwner.id} />
+                </WorkspaceSection>
+              </div>
+            )}
+          </WorkspaceSection>
 
           <div className="space-y-6">
-            <Card className="p-6"><h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">التنبيهات</h3><div className="mt-4 space-y-3"><div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">الفواتير المتأخرة: {ownerWorkspace.overdueInvoices.length.toLocaleString('ar')}</div><div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">العقود التي تنتهي خلال 30 يومًا: {ownerWorkspace.expiringContracts.length.toLocaleString('ar')}</div><div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">طلبات الصيانة المفتوحة: {ownerWorkspace.maintenance.filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)).length.toLocaleString('ar')}</div></div></Card>
+            <WorkspaceSection title="تنبيهات المالك" description="التنبيهات التشغيلية التي تحتاج متابعة فورية.">
+              <div className="space-y-3">
+                <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+                  الفواتير المتأخرة: {ownerWorkspace.overdueInvoices.length.toLocaleString('ar')}
+                </div>
+                <div className="rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300">
+                  العقود التي تنتهي خلال 30 يومًا: {ownerWorkspace.expiringContracts.length.toLocaleString('ar')}
+                </div>
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/80 p-4 text-sm text-blue-700 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-300">
+                  طلبات الصيانة المفتوحة: {ownerWorkspace.maintenance.filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)).length.toLocaleString('ar')}
+                </div>
+              </div>
+            </WorkspaceSection>
 
-            <Card className="p-6"><h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">الخدمات والصيانة والوثائق</h3><div className="mt-4 space-y-4"><WorkspaceSection title="متابعة الخدمات" description="مصروفات الخدمات والملاحظات الحرجة على محفظة المالك."><div className="grid gap-2"><div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>مصروفات الخدمات</span><strong>{formatCurrency(ownerWorkspace.utilityExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0))}</strong></div><div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>فواتير متأخرة</span><strong>{ownerWorkspace.overdueInvoices.length.toLocaleString('ar')}</strong></div><div className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 dark:bg-slate-900/70"><span>طلبات صيانة مفتوحة</span><strong>{ownerWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}</strong></div></div></WorkspaceSection><WorkspaceSection title="آخر طلبات الصيانة" description="أحدث الطلبات المسجلة على عقارات ووحدات هذا المالك."><div className="space-y-2">{ownerWorkspace.maintenance.slice(0, 4).map((record) => (<div key={record.id} className="flex items-center justify-between rounded-2xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70"><span className="flex items-center gap-2"><Wrench size={14} className="text-amber-500" />{record.description || record.issueTitle || 'طلب صيانة'}</span><span className="font-bold text-amber-600 dark:text-amber-300">{record.status}</span></div>))}{!ownerWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد طلبات صيانة مرتبطة بهذا المالك.</div>}</div></WorkspaceSection><AttachmentsManager entityType="owner" entityId={selectedOwner.id} /></div></Card>
+            <WorkspaceSection title="ملفات المالك" description="مرفقات العقود والمستندات المرتبطة.">
+              <AttachmentsManager entityType="owner" entityId={selectedOwner.id} />
+            </WorkspaceSection>
           </div>
         </div>
       )}

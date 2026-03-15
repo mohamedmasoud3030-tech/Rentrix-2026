@@ -4,16 +4,18 @@ import { toast } from 'react-hot-toast';
 import { AlertTriangle, Building2, Clock, DollarSign, FileText, PlusCircle, Printer, Receipt, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
 import { Contract, Owner } from '../types';
-import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
 import StatusPill from '../components/ui/StatusPill';
 import PageHeader from '../components/ui/PageHeader';
+import FormSection from '../components/ui/FormSection';
 import SearchFilterBar from '../components/shared/SearchFilterBar';
 import TableWrapper, { Td, Th, Tr } from '../components/ui/TableWrapper';
 import PrintPreviewModal from '../components/shared/PrintPreviewModal';
 import AttachmentsManager from '../components/shared/AttachmentsManager';
 import ConfirmDialog from '../components/shared/ConfirmDialog';
+import WorkspaceSection from '../components/ui/WorkspaceSection';
+import Tabs from '../components/ui/Tabs';
 import { ContractPrintable } from '../components/print/ContractPrintable';
 import { exportContractToPdf } from '../services/pdfService';
 import { fixMojibake, formatCurrency, formatDate, toArabicDigits } from '../utils/helpers';
@@ -86,6 +88,7 @@ const Contracts: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<'ALL' | Contract['status']>('ALL');
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [contractTab, setContractTab] = useState<'overview' | 'finance' | 'activity' | 'documents'>('overview');
 
   const currency = db.settings?.currency || 'OMR';
 
@@ -199,6 +202,10 @@ const Contracts: React.FC = () => {
     }
   }, [db.contracts, location.search, navigate]);
 
+  useEffect(() => {
+    setContractTab('overview');
+  }, [selectedContractId]);
+
   const openCreate = () => {
     setEditingContract(null);
     setDefaultUnitId(undefined);
@@ -253,13 +260,11 @@ const Contracts: React.FC = () => {
         <SummaryStatCard label="المتأخرات" value={formatCurrency(stats.overdueBalance, currency)} icon={<AlertTriangle size={20} />} color={stats.overdueBalance > 0 ? 'rose' : 'emerald'} />
       </div>
 
-      <Card className="p-4 sm:p-5">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-xl font-extrabold text-slate-800 dark:text-slate-100">قائمة العقود</h2>
-            <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">العقود مرتبة حسب الأولوية مع أزرار مباشرة للتحصيل والتجديد والطباعة.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
+      <WorkspaceSection
+        title="قائمة العقود"
+        description="العقود مرتبة حسب الأولوية مع أزرار مباشرة للتحصيل والتجديد والطباعة."
+        actions={
+          <>
             <button onClick={() => navigate('/financials')} className={ghostButton}>
               <DollarSign size={16} />
               التحصيلات
@@ -268,8 +273,9 @@ const Contracts: React.FC = () => {
               <FileText size={16} />
               تقرير العقود
             </button>
-          </div>
-        </div>
+          </>
+        }
+      >
 
         <SearchFilterBar
           value={searchTerm}
@@ -375,17 +381,15 @@ const Contracts: React.FC = () => {
             </tbody>
           </TableWrapper>
         )}
-      </Card>
+      </WorkspaceSection>
 
       {selectedContract && contractWorkspace && (
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.08fr_0.92fr]">
-          <Card className="p-4 sm:p-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">مساحة عمل العقد</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">ربط العقد بالمستأجر والوحدة والعقار والتحصيل والفواتير والمستندات في شاشة واحدة.</p>
-              </div>
-              <div className="flex flex-wrap gap-2">
+          <WorkspaceSection
+            title="مساحة عمل العقد"
+            description="ربط العقد بالمستأجر والوحدة والعقار والتحصيل والفواتير والمستندات في شاشة واحدة."
+            actions={
+              <>
                 <button type="button" onClick={() => setPrintingContract(selectedContract)} className={ghostButton}>
                   <Printer size={15} />
                   طباعة العقد
@@ -398,121 +402,162 @@ const Contracts: React.FC = () => {
                   <Receipt size={15} />
                   التحصيل
                 </button>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              </>
+            }
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryStatCard icon={<DollarSign size={18} />} color="emerald" title="الإيجار الشهري" value={formatCurrency(selectedContract.rent, currency)} />
               <SummaryStatCard icon={<AlertTriangle size={18} />} color="rose" title="الرصيد المستحق" value={formatCurrency(selectedContract.balance, currency)} />
               <SummaryStatCard icon={<FileText size={18} />} color="blue" title="الفواتير" value={contractWorkspace.invoices.length.toLocaleString('ar')} />
               <SummaryStatCard icon={<Receipt size={18} />} color="amber" title="الدفعات" value={contractWorkspace.receipts.length.toLocaleString('ar')} />
             </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">البيانات الأساسية</div>
-                <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                  <div><strong>رقم العقد:</strong> {selectedContract.no || '—'}</div>
-                  <div><strong>المستأجر:</strong> {contractWorkspace.tenant ? displayTenantName(contractWorkspace.tenant) : '—'}</div>
-                  <div><strong>الوحدة:</strong> {displayUnitName(contractWorkspace.unit || undefined)}</div>
-                  <div><strong>العقار:</strong> {contractWorkspace.property?.name || '—'}</div>
-                  <div><strong>المالك:</strong> {contractWorkspace.owner?.name || '—'}</div>
-                </div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الحركة المالية</div>
-                <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
-                  <div><strong>إجمالي الفواتير:</strong> {formatCurrency(contractWorkspace.invoices.reduce((sum, item) => sum + Number(item.amount || 0) + Number(item.taxAmount || 0), 0), currency)}</div>
-                  <div><strong>إجمالي المقبوض:</strong> {formatCurrency(contractWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
-                  <div><strong>المصروفات:</strong> {formatCurrency(contractWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
-                  <div><strong>التأمين:</strong> {formatCurrency(selectedContract.deposit || 0, currency)}</div>
-                </div>
-              </div>
+            <div className="mt-4">
+              <Tabs
+                variant="pill"
+                tabs={[
+                  { id: 'overview', label: 'نظرة عامة' },
+                  { id: 'finance', label: 'المالية' },
+                  { id: 'activity', label: 'المتابعة' },
+                  { id: 'documents', label: 'المستندات' },
+                ]}
+                activeTab={contractTab}
+                onChange={(id) => setContractTab(id as typeof contractTab)}
+              />
             </div>
 
-            <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <div className="text-xs font-bold text-blue-700 dark:text-blue-200">اتفاق المالك والمكتب</div>
-                  <div className="mt-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">
-                    {getOwnerAgreementTypeLabel(contractWorkspace.ownerAgreement.ownerAgreementType)}
+            {contractTab === 'overview' && (
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">البيانات الأساسية</div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                      <div><strong>رقم العقد:</strong> {selectedContract.no || '—'}</div>
+                      <div><strong>المستأجر:</strong> {contractWorkspace.tenant ? displayTenantName(contractWorkspace.tenant) : '—'}</div>
+                      <div><strong>الوحدة:</strong> {displayUnitName(contractWorkspace.unit || undefined)}</div>
+                      <div><strong>العقار:</strong> {contractWorkspace.property?.name || '—'}</div>
+                      <div><strong>المالك:</strong> {contractWorkspace.owner?.name || '—'}</div>
+                    </div>
                   </div>
-                  <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
-                    {contractWorkspace.ownerAgreement.ownerAgreementType === 'FIXED'
-                      ? formatCurrency(contractWorkspace.ownerAgreement.ownerAgreementValue, currency)
-                      : `${toArabicDigits(String(contractWorkspace.ownerAgreement.ownerAgreementValue || 0))}%`}
+                  <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                    <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الحركة المالية</div>
+                    <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                      <div><strong>إجمالي الفواتير:</strong> {formatCurrency(contractWorkspace.invoices.reduce((sum, item) => sum + Number(item.amount || 0) + Number(item.taxAmount || 0), 0), currency)}</div>
+                      <div><strong>إجمالي المقبوض:</strong> {formatCurrency(contractWorkspace.receipts.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
+                      <div><strong>المصروفات:</strong> {formatCurrency(contractWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
+                      <div><strong>التأمين:</strong> {formatCurrency(selectedContract.deposit || 0, currency)}</div>
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                    هذا الاتفاق منفصل عن بيانات عقد الإيجار، ويمكن تعديله من نموذج مستقل بدون خلطه ببيانات المستأجر والوحدة.
-                  </p>
                 </div>
-                <button type="button" onClick={() => setAgreementContract(selectedContract)} className={ghostButton}>
-                  <Building2 size={15} />
-                  تعديل الاتفاق
-                </button>
-              </div>
-            </div>
 
-            <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">الاستحقاقات القادمة</div>
+                <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-bold text-blue-700 dark:text-blue-200">اتفاق المالك والمكتب</div>
+                      <div className="mt-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                        {getOwnerAgreementTypeLabel(contractWorkspace.ownerAgreement.ownerAgreementType)}
+                      </div>
+                      <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                        {contractWorkspace.ownerAgreement.ownerAgreementType === 'FIXED'
+                          ? formatCurrency(contractWorkspace.ownerAgreement.ownerAgreementValue, currency)
+                          : `${toArabicDigits(String(contractWorkspace.ownerAgreement.ownerAgreementValue || 0))}%`}
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        هذا الاتفاق منفصل عن بيانات عقد الإيجار، ويمكن تعديله من نموذج مستقل بدون خلطه ببيانات المستأجر والوحدة.
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setAgreementContract(selectedContract)} className={ghostButton}>
+                      <Building2 size={15} />
+                      تعديل الاتفاق
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {contractTab === 'finance' && (
+              <>
+                <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-2">
+                  <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                    <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">الاستحقاقات القادمة</div>
+                    <div className="space-y-2">
+                      {contractWorkspace.upcomingInvoices.map((invoice) => (
+                        <div key={invoice.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
+                          <span className="min-w-0">
+                            <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
+                            <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span>
+                          </span>
+                          <span className="font-extrabold text-slate-700 dark:text-slate-200">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                        </div>
+                      ))}
+                      {!contractWorkspace.upcomingInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير معلقة أو قادمة لهذا العقد.</div>}
+                    </div>
+                  </div>
+                  <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
+                    <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">إجراءات سريعة</div>
+                    <div className="grid grid-cols-1 gap-2">
+                      <button type="button" onClick={() => navigate('/financials')} className={ghostButton}>
+                        <Receipt size={15} />
+                        فتح شاشة التحصيل لهذا العقد
+                      </button>
+                      <button type="button" onClick={() => navigate('/invoices')} className={ghostButton}>
+                        <FileText size={15} />
+                        مراجعة الفواتير
+                      </button>
+                      <button type="button" onClick={() => navigate('/maintenance')} className={ghostButton}>
+                        <Wrench size={15} />
+                        متابعة الصيانة المرتبطة
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <div className="grid grid-cols-[1fr_0.85fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
+                    <div>الفاتورة</div>
+                    <div>الاستحقاق</div>
+                    <div>الحالة</div>
+                    <div>المبلغ</div>
+                  </div>
+                  <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                    {contractWorkspace.invoices.slice(0, 6).map((invoice) => (
+                      <div key={invoice.id} className="grid grid-cols-[1fr_0.85fr_0.8fr_0.8fr] gap-4 px-4 py-3 text-sm">
+                        <div className="font-semibold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</div>
+                        <div className="text-slate-600 dark:text-slate-300">{formatDate(invoice.dueDate)}</div>
+                        <div><StatusPill status={invoice.status}>{invoice.status}</StatusPill></div>
+                        <div className="font-bold text-slate-700 dark:text-slate-200">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</div>
+                      </div>
+                    ))}
+                    {!contractWorkspace.invoices.length && <div className="px-4 py-4 text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير مرتبطة بهذا العقد حتى الآن.</div>}
+                  </div>
+                </div>
+              </>
+            )}
+
+            {contractTab === 'activity' && (
+              <WorkspaceSection title="متابعة الصيانة والخدمات" description="آخر أعمال الصيانة المرتبطة بالعقد." className="mt-4">
                 <div className="space-y-2">
-                  {contractWorkspace.upcomingInvoices.map((invoice) => (
-                    <div key={invoice.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
-                      <span className="min-w-0">
-                        <span className="block font-bold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</span>
-                        <span className="block text-xs text-slate-500 dark:text-slate-400">{formatDate(invoice.dueDate)}</span>
-                      </span>
-                      <span className="font-extrabold text-slate-700 dark:text-slate-200">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</span>
+                  {contractWorkspace.maintenance.slice(0, 4).map((record) => (
+                    <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
+                      <span>{record.issueTitle || record.description || 'طلب صيانة'}</span>
+                      <span className="font-bold text-amber-600 dark:text-amber-300">{record.status}</span>
                     </div>
                   ))}
-                  {!contractWorkspace.upcomingInvoices.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير معلقة أو قادمة لهذا العقد.</div>}
+                  {!contractWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد أعمال صيانة مرتبطة بهذا العقد.</div>}
                 </div>
-              </div>
-              <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                <div className="mb-3 text-sm font-extrabold text-slate-700 dark:text-slate-200">إجراءات سريعة</div>
-                <div className="grid grid-cols-1 gap-2">
-                  <button type="button" onClick={() => navigate('/financials')} className={ghostButton}>
-                    <Receipt size={15} />
-                    فتح شاشة التحصيل لهذا العقد
-                  </button>
-                  <button type="button" onClick={() => navigate('/invoices')} className={ghostButton}>
-                    <FileText size={15} />
-                    مراجعة الفواتير
-                  </button>
-                  <button type="button" onClick={() => navigate('/maintenance')} className={ghostButton}>
-                    <Wrench size={15} />
-                    متابعة الصيانة المرتبطة
-                  </button>
-                </div>
-              </div>
-            </div>
+              </WorkspaceSection>
+            )}
 
-            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800">
-              <div className="grid grid-cols-[1fr_0.85fr_0.8fr_0.8fr] gap-4 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-bold text-slate-500 dark:border-slate-800 dark:bg-slate-800/70 dark:text-slate-400">
-                <div>الفاتورة</div>
-                <div>الاستحقاق</div>
-                <div>الحالة</div>
-                <div>المبلغ</div>
-              </div>
-              <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                {contractWorkspace.invoices.slice(0, 6).map((invoice) => (
-                  <div key={invoice.id} className="grid grid-cols-[1fr_0.85fr_0.8fr_0.8fr] gap-4 px-4 py-3 text-sm">
-                    <div className="font-semibold text-slate-800 dark:text-slate-100">{invoice.no || 'فاتورة'}</div>
-                    <div className="text-slate-600 dark:text-slate-300">{formatDate(invoice.dueDate)}</div>
-                    <div><StatusPill status={invoice.status}>{invoice.status}</StatusPill></div>
-                    <div className="font-bold text-slate-700 dark:text-slate-200">{formatCurrency(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0), currency)}</div>
-                  </div>
-                ))}
-                {!contractWorkspace.invoices.length && <div className="px-4 py-4 text-sm text-slate-500 dark:text-slate-400">لا توجد فواتير مرتبطة بهذا العقد حتى الآن.</div>}
-              </div>
-            </div>
-          </Card>
+            {contractTab === 'documents' && (
+              <WorkspaceSection title="المستندات" description="المرفقات المرتبطة بالعقد." className="mt-4">
+                <AttachmentsManager entityType="CONTRACT" entityId={selectedContract.id} />
+              </WorkspaceSection>
+            )}
+          </WorkspaceSection>
 
           <div className="space-y-4">
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">التنبيهات والمتابعة</h3>
-              <div className="mt-4 space-y-3">
+            <WorkspaceSection title="التنبيهات والمتابعة" description="الحالات التي تحتاج متابعة فورية للعقد.">
+              <div className="space-y-3">
                 <div className="rounded-2xl border border-rose-200 bg-rose-50/80 p-4 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
                   الفواتير المتأخرة: {contractWorkspace.overdueInvoices.length.toLocaleString('ar')}
                 </div>
@@ -523,42 +568,20 @@ const Contracts: React.FC = () => {
                   متابعات الصيانة: {contractWorkspace.maintenance.filter((item) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(item.status)).length.toLocaleString('ar')}
                 </div>
               </div>
-            </Card>
+            </WorkspaceSection>
 
-            <Card className="p-4 sm:p-5">
-              <h3 className="text-lg font-extrabold text-slate-800 dark:text-slate-100">الخدمات والمستندات</h3>
-              <div className="mt-4 space-y-4">
-                <div className="rounded-2xl bg-slate-50 p-4 text-sm text-slate-600 dark:bg-slate-800/70 dark:text-slate-300">
-                  <div className="font-bold text-slate-700 dark:text-slate-200">تتبع الخدمات</div>
-                  <div className="mt-3 grid grid-cols-1 gap-2">
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
-                      <span>مصروفات الخدمات</span>
-                      <strong>{formatCurrency(contractWorkspace.utilityExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</strong>
-                    </div>
-                    <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
-                      <span>الفواتير المتأخرة</span>
-                      <strong>{contractWorkspace.overdueInvoices.length.toLocaleString('ar')}</strong>
-                    </div>
-                  </div>
+            <WorkspaceSection title="ملف الخدمات" description="ملخص سريع للخدمات والمتابعات التشغيلية.">
+              <div className="space-y-3 text-sm text-slate-600 dark:text-slate-300">
+                <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
+                  <span>مصروفات الخدمات</span>
+                  <strong>{formatCurrency(contractWorkspace.utilityExpenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</strong>
                 </div>
-                <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
-                  <div className="mb-2 flex items-center gap-2 text-sm font-bold text-slate-700 dark:text-slate-200">
-                    <Wrench size={15} />
-                    آخر أعمال الصيانة
-                  </div>
-                  <div className="space-y-2">
-                    {contractWorkspace.maintenance.slice(0, 4).map((record) => (
-                      <div key={record.id} className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 text-sm dark:bg-slate-900/70">
-                        <span>{record.issueTitle || record.description || 'طلب صيانة'}</span>
-                        <span className="font-bold text-amber-600 dark:text-amber-300">{record.status}</span>
-                      </div>
-                    ))}
-                    {!contractWorkspace.maintenance.length && <div className="text-sm text-slate-500 dark:text-slate-400">لا توجد أعمال صيانة مرتبطة بهذا العقد.</div>}
-                  </div>
+                <div className="flex items-center justify-between rounded-xl bg-white/80 px-3 py-2 dark:bg-slate-900/70">
+                  <span>الفواتير المتأخرة</span>
+                  <strong>{contractWorkspace.overdueInvoices.length.toLocaleString('ar')}</strong>
                 </div>
-                <AttachmentsManager entityType="CONTRACT" entityId={selectedContract.id} />
               </div>
-            </Card>
+            </WorkspaceSection>
           </div>
         </div>
       )}
@@ -773,24 +796,26 @@ const ContractForm: React.FC<{
         {!hasAvailableUnits && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">لا توجد وحدات شاغرة متاحة لإضافة عقد جديد الآن. قم بإنهاء عقد قائم أو أضف وحدة جديدة ثم أعد المحاولة.</div>}
         {!hasTenants && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">لا يمكن إنشاء عقد بدون مستأجر. أضف مستأجرًا أولًا من شاشة المستأجرين أو العملاء المحتملين.</div>}
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+        <FormSection
+          title="بيانات عقد الإيجار"
+          description="هذا النموذج مخصص فقط لربط المستأجر بالوحدة وتحديد قيمة الإيجار ومدة العقد والتأمين. اتفاق المالك والمكتب له نموذج مستقل منفصل."
+          columns={1}
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
-            <div>
-              <div className="text-sm font-extrabold text-slate-800 dark:text-slate-100">بيانات عقد الإيجار</div>
-              <p className="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400">هذا النموذج مخصص فقط لربط المستأجر بالوحدة وتحديد قيمة الإيجار ومدة العقد والتأمين. اتفاق المالك والمكتب له نموذج مستقل منفصل.</p>
-            </div>
             {contract ? (
               <button type="button" onClick={() => { onClose(); onManageOwnerAgreement(contract); }} className={ghostButton}>
                 <Building2 size={15} />
                 فتح نموذج اتفاق المالك
               </button>
             ) : (
-              <div className="rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-500 shadow-sm dark:bg-slate-950/80 dark:text-slate-400">سيتم اعتماد اتفاق المالك الافتراضي من بيانات المالك، ويمكن تعديله لاحقًا بعد حفظ العقد.</div>
+              <div className="rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-500 shadow-sm dark:bg-slate-950/80 dark:text-slate-400">
+                سيتم اعتماد اتفاق المالك الافتراضي من بيانات المالك، ويمكن تعديله لاحقًا بعد حفظ العقد.
+              </div>
             )}
           </div>
-        </div>
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormSection title="تفاصيل المستأجر والوحدة" description="تأكد من ربط العقد بالوحدة النشطة والمستأجر الصحيح." columns={2}>
           <div>
             <label className={labelCls}>الوحدة</label>
             <select className={inputCls} name="unitId" value={data.unitId || ''} onChange={handleChange} required disabled={!hasAvailableUnits && !contract}>
@@ -849,7 +874,7 @@ const ContractForm: React.FC<{
             <label className={labelCls}>ملاحظات العقد</label>
             <textarea className={`${inputCls} min-h-[110px]`} name="notes" value={data.notes || ''} onChange={handleChange} />
           </div>
-        </div>
+        </FormSection>
 
         <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -926,28 +951,26 @@ const OwnerAgreementForm: React.FC<{
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="اتفاق المالك والمكتب" size="md">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-          <div className="grid grid-cols-1 gap-3 text-sm text-slate-700 dark:text-slate-200 sm:grid-cols-2">
-            <div>
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">المالك</div>
-              <div className="mt-1 font-bold">{fixMojibake(owner?.name || 'غير محدد')}</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الوحدة</div>
-              <div className="mt-1 font-bold">{unitName}</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">العقار</div>
-              <div className="mt-1 font-bold">{propertyName}</div>
-            </div>
-            <div>
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">رقم العقد</div>
-              <div className="mt-1 font-bold">{contract?.no || '—'}</div>
-            </div>
+        <FormSection title="بيانات الاتفاق" description="مراجعة بيانات المالك والعقار قبل تعديل شروط الاتفاق." columns={2}>
+          <div>
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">المالك</div>
+            <div className="mt-1 font-bold">{fixMojibake(owner?.name || 'غير محدد')}</div>
           </div>
-        </div>
+          <div>
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الوحدة</div>
+            <div className="mt-1 font-bold">{unitName}</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">العقار</div>
+            <div className="mt-1 font-bold">{propertyName}</div>
+          </div>
+          <div>
+            <div className="text-xs font-bold text-slate-500 dark:text-slate-400">رقم العقد</div>
+            <div className="mt-1 font-bold">{contract?.no || '—'}</div>
+          </div>
+        </FormSection>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormSection title="شروط الاتفاق" description="اختر نوع الاتفاق وحدد القيمة المناسبة." columns={2}>
           <div>
             <label className={labelCls}>نوع الاتفاق</label>
             <select className={inputCls} value={draft.ownerAgreementType} onChange={(event) => setDraft((current) => ({ ...current, ownerAgreementType: event.target.value as OwnerAgreementDraft['ownerAgreementType'] }))}>
@@ -959,7 +982,7 @@ const OwnerAgreementForm: React.FC<{
             <label className={labelCls}>{draft.ownerAgreementType === 'FIXED' ? 'قيمة العائد الثابت' : 'نسبة الإدارة %'}</label>
             <input className={inputCls} type="number" min={0} value={draft.ownerAgreementValue} onChange={(event) => setDraft((current) => ({ ...current, ownerAgreementValue: Number(event.target.value) }))} placeholder={draft.ownerAgreementType === 'FIXED' ? 'مثال: 300' : 'مثال: 10'} />
           </div>
-        </div>
+        </FormSection>
 
         <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-xs leading-6 text-blue-800 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
           هذا النموذج خاص باتفاق المالك مع المكتب فقط، وتم فصله عن نموذج عقد الإيجار حتى لا تختلط بيانات المستأجر والوحدة مع آلية توزيع العائد.

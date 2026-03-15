@@ -14,13 +14,13 @@ import {
   Wrench,
 } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import Card from '../components/ui/Card';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
 import TableWrapper, { Td, Th, Tr } from '../components/ui/TableWrapper';
 import PageHeader from '../components/ui/PageHeader';
 import SearchFilterBar from '../components/shared/SearchFilterBar';
 import Tabs from '../components/ui/Tabs';
 import PrintPreviewModal from '../components/shared/PrintPreviewModal';
+import WorkspaceSection from '../components/ui/WorkspaceSection';
 import ReportDocumentLayout, {
   ReportLayoutColumn,
   ReportLayoutMetadataItem,
@@ -565,9 +565,9 @@ const Reports: React.FC = () => {
         <SummaryStatCard title="صيانة مفتوحة" value={overview.openMaintenance.length.toLocaleString('ar')} color="blue" icon={<Wrench size={18} />} />
       </div>
 
-      <Card className="p-3 sm:p-4">
+      <WorkspaceSection title="تصنيفات التقارير" description="اختر القسم المناسب لعرض المؤشرات والتحليلات.">
         <Tabs tabs={reportTabs} activeTab={activeTab} onChange={(tab) => setActiveTab(tab as ReportTab)} />
-      </Card>
+      </WorkspaceSection>
 
       {activeTab === 'financial' && (
         <div className="grid gap-4 xl:grid-cols-[0.95fr_1.05fr]">
@@ -582,11 +582,7 @@ const Reports: React.FC = () => {
             }))}
           />
 
-          <Card className="p-4 sm:p-5">
-            <div className="mb-3">
-              <h3 className="erp-section-title">العقود الأعلى رصيدًا</h3>
-              <p className="erp-section-text mt-1">قراءة سريعة للعقود ذات الأرصدة المفتوحة الأعلى داخل النظام.</p>
-            </div>
+          <WorkspaceSection title="العقود الأعلى رصيدًا" description="قراءة سريعة للعقود ذات الأرصدة المفتوحة الأعلى داخل النظام.">
             <TableWrapper>
               <thead>
                 <Tr>
@@ -612,16 +608,12 @@ const Reports: React.FC = () => {
                   })}
               </tbody>
             </TableWrapper>
-          </Card>
+          </WorkspaceSection>
         </div>
       )}
 
       {activeTab === 'properties' && (
-        <Card className="p-4 sm:p-5">
-          <div className="mb-3">
-            <h3 className="erp-section-title">تقارير العقارات</h3>
-            <p className="erp-section-text mt-1">مقارنة الأداء بين العقارات من حيث الوحدات والإشغال والإيراد.</p>
-          </div>
+        <WorkspaceSection title="تقارير العقارات" description="مقارنة الأداء بين العقارات من حيث الوحدات والإشغال والإيراد.">
           <TableWrapper>
             <thead>
               <Tr>
@@ -644,15 +636,11 @@ const Reports: React.FC = () => {
               ))}
             </tbody>
           </TableWrapper>
-        </Card>
+        </WorkspaceSection>
       )}
 
       {activeTab === 'tenants' && (
-        <Card className="p-4 sm:p-5">
-          <div className="mb-3">
-            <h3 className="erp-section-title">تقارير المستأجرين</h3>
-            <p className="erp-section-text mt-1">العقود الحالية، الفواتير المتأخرة، والرصيد المفتوح لكل مستأجر.</p>
-          </div>
+        <WorkspaceSection title="تقارير المستأجرين" description="العقود الحالية، الفواتير المتأخرة، والرصيد المفتوح لكل مستأجر.">
           <TableWrapper>
             <thead>
               <Tr>
@@ -673,36 +661,28 @@ const Reports: React.FC = () => {
               ))}
             </tbody>
           </TableWrapper>
-        </Card>
+        </WorkspaceSection>
       )}
 
       {activeTab === 'owners' && (
         <div className="space-y-4">
-          <Card className="p-4 sm:p-5">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div>
-                <h3 className="erp-section-title">كشف حساب المالك</h3>
-                <p className="erp-section-text mt-1">اختر المالك ثم راجع الحركة المالية، وصدّر كشف الحساب بصيغة PDF رسمية.</p>
-              </div>
-            </div>
-            <div className="mt-4">
-              <SearchFilterBar
-                value={ownerSearch}
-                onChange={setOwnerSearch}
-                placeholder="ابحث باسم المالك أو الهاتف أو البريد"
-                rightSlot={
-                  <select value={selectedOwnerId} onChange={(event) => setSelectedOwnerId(event.target.value)} className="min-w-[220px]">
-                    <option value="">اختر المالك</option>
-                    {ownerRows.map((row) => (
-                      <option key={row.owner.id} value={row.owner.id}>
-                        {row.owner.name}
-                      </option>
-                    ))}
-                  </select>
-                }
-              />
-            </div>
-          </Card>
+          <WorkspaceSection title="كشف حساب المالك" description="اختر المالك ثم راجع الحركة المالية، وصدّر كشف الحساب بصيغة PDF رسمية.">
+            <SearchFilterBar
+              value={ownerSearch}
+              onChange={setOwnerSearch}
+              placeholder="ابحث باسم المالك أو الهاتف أو البريد"
+              rightSlot={
+                <select value={selectedOwnerId} onChange={(event) => setSelectedOwnerId(event.target.value)} className="min-w-[220px]">
+                  <option value="">اختر المالك</option>
+                  {ownerRows.map((row) => (
+                    <option key={row.owner.id} value={row.owner.id}>
+                      {row.owner.name}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+          </WorkspaceSection>
 
           {selectedOwnerRow ? (
             <>
@@ -715,8 +695,7 @@ const Reports: React.FC = () => {
               </div>
 
               <div className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-                <Card className="p-4 sm:p-5">
-                  <h4 className="erp-section-title">ملخص المالك</h4>
+                <WorkspaceSection title="ملخص المالك" description="بيانات المالك وأبرز المؤشرات التشغيلية.">
                   <div className="mt-3 space-y-2.5 text-sm leading-7 text-slate-600 dark:text-slate-300">
                     <div><span className="font-bold text-slate-900 dark:text-slate-100">الاسم:</span> {selectedOwnerRow.owner.name}</div>
                     <div><span className="font-bold text-slate-900 dark:text-slate-100">الهاتف:</span> {selectedOwnerRow.owner.phone || 'غير متوفر'}</div>
@@ -724,10 +703,9 @@ const Reports: React.FC = () => {
                     <div><span className="font-bold text-slate-900 dark:text-slate-100">الفواتير المتأخرة:</span> {selectedOwnerRow.overdueInvoices.length.toLocaleString('ar')}</div>
                     <div><span className="font-bold text-slate-900 dark:text-slate-100">الصيانة المفتوحة:</span> {selectedOwnerRow.maintenance.filter((record) => ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status)).length.toLocaleString('ar')}</div>
                   </div>
-                </Card>
+                </WorkspaceSection>
 
-                <Card className="p-4 sm:p-5">
-                  <h4 className="erp-section-title">حركة الحساب</h4>
+                <WorkspaceSection title="حركة الحساب" description="تفاصيل آخر الحركات المرتبطة بالمالك.">
                   <TableWrapper>
                     <thead>
                       <Tr>
@@ -756,11 +734,11 @@ const Reports: React.FC = () => {
                       )}
                     </tbody>
                   </TableWrapper>
-                </Card>
+                </WorkspaceSection>
               </div>
             </>
           ) : (
-            <Card className="erp-empty">لا توجد بيانات مطابقة للبحث الحالي.</Card>
+            <WorkspaceSection title="لا توجد بيانات مطابقة" description="جرّب تعديل كلمات البحث أو اختيار مالك مختلف." />
           )}
         </div>
       )}
@@ -776,11 +754,7 @@ const Reports: React.FC = () => {
               icon: item.label.includes('صيانة') ? <Wrench size={16} /> : item.label.includes('عقود') ? <CalendarClock size={16} /> : <FileBarChart2 size={16} />,
             }))}
           />
-          <Card className="p-4 sm:p-5">
-            <div className="mb-3">
-              <h3 className="erp-section-title">أحدث الطلبات التشغيلية</h3>
-              <p className="erp-section-text mt-1">أحدث طلبات الصيانة المفتوحة لسهولة المتابعة اليومية.</p>
-            </div>
+          <WorkspaceSection title="أحدث الطلبات التشغيلية" description="أحدث طلبات الصيانة المفتوحة لسهولة المتابعة اليومية.">
             <TableWrapper>
               <thead>
                 <Tr>
@@ -808,7 +782,7 @@ const Reports: React.FC = () => {
                   })}
               </tbody>
             </TableWrapper>
-          </Card>
+          </WorkspaceSection>
         </div>
       )}
 
@@ -839,11 +813,7 @@ const ReportListCard: React.FC<{
   description: string;
   items: Array<{ label: string; value: string; helperText?: string; icon: React.ReactNode }>;
 }> = ({ title, description, items }) => (
-  <Card className="p-4 sm:p-5">
-    <div className="mb-3">
-      <h3 className="erp-section-title">{title}</h3>
-      <p className="erp-section-text mt-1">{description}</p>
-    </div>
+  <WorkspaceSection title={title} description={description}>
     <div className="space-y-2.5">
       {items.map((item) => (
         <div key={item.label} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-slate-50/70 px-4 py-3 dark:border-slate-700 dark:bg-slate-800/50">
@@ -860,7 +830,7 @@ const ReportListCard: React.FC<{
         </div>
       ))}
     </div>
-  </Card>
+  </WorkspaceSection>
 );
 
 export default Reports;
