@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, ReactNode, useMemo } from 'react';
 import { toast } from 'react-hot-toast';
-import { User, Settings, Database, PermissionAction, ContractBalance, OwnerBalance, AccountBalance, TenantBalance, Governance } from '../types';
+import { User, Settings, Database, PermissionAction, Contract, ContractBalance, OwnerBalance, AccountBalance, TenantBalance, Governance } from '../types';
 import { fixMojibakeDeep, sanitizePhoneNumber } from '../utils/helpers';
 import { supabase } from '../services/db';
 import { authService } from '../services/authService';
@@ -169,6 +169,21 @@ const toSnakeCaseObj = (obj: any): any => {
   return Object.fromEntries(Object.entries(obj).map(([key, value]) => [toSnakeCaseStr(key), toSnakeCaseObj(value)]));
 };
 
+const normalizeContractRecord = (contract: Partial<Contract> & Record<string, any>): Contract => {
+  const start = contract.start || contract.startDate || '';
+  const end = contract.end || contract.endDate || '';
+  const depositValue = Number(contract.deposit ?? contract.depositAmount ?? 0);
+
+  return {
+    ...(contract as Contract),
+    start,
+    end,
+    startDate: contract.startDate || start,
+    endDate: contract.endDate || end,
+    deposit: depositValue,
+  };
+};
+
 const isUuidLike = (value: unknown) => typeof value === 'string' && /^[0-9a-f-]{32,36}$/i.test(value);
 
 const sortRowsByIdType = (rows: any[]) => {
@@ -318,6 +333,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       allData.governance = fixMojibakeDeep(allData.governance[0] || emptyGovernance);
       allData.serials = fixMojibakeDeep(allData.serials[0] || DEFAULT_SERIALS);
       allData.auth = { users: allData.users || [] };
+      allData.contracts = (allData.contracts || []).map(normalizeContractRecord);
 
       const { ownerBalances, accountBalances, contractBalances, tenantBalances } = calculateBalances(allData);
       allData.ownerBalances = ownerBalances;

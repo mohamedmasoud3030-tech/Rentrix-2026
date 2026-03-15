@@ -8,8 +8,19 @@ type MutationOptions = {
   silent?: boolean;
 };
 
-const toErrorMessage = (error: unknown, fallback: string) =>
-  error instanceof Error ? error.message : fallback;
+const toErrorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === 'object') {
+    const structuredError = error as { code?: string; message?: string; details?: string | null; hint?: string | null };
+    if (structuredError.code === '42501' && structuredError.message?.toLowerCase().includes('row-level security')) {
+      return 'سياسات الأمان في Supabase تمنع تنفيذ العملية على هذا الجدول حاليًا. راجع صلاحيات RLS.';
+    }
+
+    const messageParts = [structuredError.message, structuredError.details, structuredError.hint].filter(Boolean);
+    if (messageParts.length) return messageParts.join(' - ');
+  }
+  return fallback;
+};
 
 const audit = async (
   user: User | null | undefined,
@@ -38,6 +49,25 @@ const toSnakeCase = (obj: any) => {
   for (const key in obj) {
     const snakeKey = key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
     next[snakeKey] = obj[key];
+  }
+
+  return next;
+};
+
+const normalizePayloadForTable = (table: keyof Database, entry: Record<string, any>) => {
+  const next = { ...entry };
+
+  if (table === 'contracts') {
+    next.start_date = next.start ?? next.startDate ?? next.start_date;
+    next.end_date = next.end ?? next.endDate ?? next.end_date;
+    next.deposit_amount = next.deposit ?? next.depositAmount ?? next.deposit_amount;
+
+    delete next.start;
+    delete next.end;
+    delete next.deposit;
+    delete next.startDate;
+    delete next.endDate;
+    delete next.depositAmount;
   }
 
   return next;
@@ -90,7 +120,7 @@ const add = async <T extends keyof Database>(
     }
   }
 
-  const payload = toSnakeCase(finalEntry);
+  const payload = toSnakeCase(normalizePayloadForTable(table, finalEntry));
   if (table === 'receiptAllocations') payload.receipt_id = finalEntry.receiptId;
 
   const tableName = String(table).replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
@@ -146,7 +176,7 @@ const add = async <T extends keyof Database>(
     if (!options.silent) {
       toast.error(toErrorMessage(error, 'حدث خطأ أثناء حفظ السجل.'));
     }
-    throw error;
+    throw new Error(toErrorMessage(error, 'تعذر حفظ السجل.'));
   }
 };
 
@@ -158,7 +188,7 @@ const update = async <T extends keyof Database>(
   options: MutationOptions = {},
 ): Promise<void> => {
   const tableName = String(table).replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
-  const payload = toSnakeCase({ ...updates, updatedAt: Date.now() });
+  const payload = toSnakeCase(normalizePayloadForTable(table, { ...updates, updatedAt: Date.now() }));
 
   try {
     const { error } = await supabase.from(tableName).update(payload).eq('id', id);
@@ -172,7 +202,7 @@ const update = async <T extends keyof Database>(
     if (!options.silent) {
       toast.error(toErrorMessage(error, 'فشل تحديث السجل.'));
     }
-    throw error;
+    throw new Error(toErrorMessage(error, 'تعذر تحديث السجل.'));
   }
 };
 
@@ -196,7 +226,7 @@ const remove = async <T extends keyof Database>(
     if (!options.silent) {
       toast.error(toErrorMessage(error, 'حدث خطأ أثناء حذف السجل.'));
     }
-    throw error;
+    throw new Error(toErrorMessage(error, 'تعذر حذف السجل.'));
   }
 };
 
