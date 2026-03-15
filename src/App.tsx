@@ -46,6 +46,8 @@ const Commissions = lazyWithRetry(() => import('./pages/Commissions'));
 const PropertyMap = lazyWithRetry(() => import('./pages/PropertyMap'));
 const System = lazyWithRetry(() => import('./pages/System'));
 const OwnerLedgerReport = lazyWithRetry(() => import('./pages/OwnerLedgerReport'));
+const TenantLedgerReport = lazyWithRetry(() => import('./pages/TenantLedgerReport'));
+const SupplierLedgerReport = lazyWithRetry(() => import('./pages/SupplierLedgerReport'));
 const PrintContract = lazyWithRetry(() => import('./pages/print/PrintContract'));
 const PrintReceipt = lazyWithRetry(() => import('./pages/print/PrintReceipt'));
 const OwnerView = lazyWithRetry(() => import('./pages/OwnerView'));
@@ -118,6 +120,8 @@ const AppRoutes = () => {
           <Route path="/map" element={<PropertyMap />} />
           <Route path="/system" element={<System />} />
           <Route path="/owner-ledger" element={<OwnerLedgerReport />} />
+          <Route path="/tenant-ledger" element={<TenantLedgerReport />} />
+          <Route path="/supplier-ledger" element={<SupplierLedgerReport />} />
         </Route>
         
         <Route path="*" element={<Navigate to="/" replace />} />

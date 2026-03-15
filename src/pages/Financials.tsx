@@ -1,5 +1,5 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useApp } from '../contexts/AppContext';
 import { Receipt, Expense, DepositTx, OwnerSettlement, Tenant, Invoice } from '../types';
 import Card from '../components/ui/Card';
@@ -37,12 +37,58 @@ const quietActionCls =
 
 type ConfirmRequest = (message: string, action: () => Promise<void>) => void;
 
+type ReceiptAllocationDefaults = {
+    contractId?: string;
+    invoiceId?: string;
+    amount?: number;
+};
+
 const Financials: React.FC = () => {
+    const location = useLocation();
     const navigate = useNavigate();
     const { db, ownerBalances, contractBalances } = useApp();
     const [activeTab, setActiveTab] = useState<'receipts' | 'expenses' | 'deposits' | 'settlements'>('receipts');
     const [confirmState, setConfirmState] = useState<{ open: boolean; message: string; action?: () => Promise<void>; busy?: boolean }>({ open: false, message: '' });
+    const [receiptModalDefaults, setReceiptModalDefaults] = useState<ReceiptAllocationDefaults | null>(null);
     const currency = db.settings?.currency || 'OMR';
+
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tabParam = params.get('tab');
+        const actionParam = params.get('action');
+        const invoiceId = params.get('invoiceId');
+        const contractId = params.get('contractId');
+
+        if (tabParam === 'receipts' || tabParam === 'expenses' || tabParam === 'deposits' || tabParam === 'settlements') {
+            setActiveTab(tabParam);
+        }
+
+        if (actionParam !== 'add') return;
+
+        const defaults: ReceiptAllocationDefaults = {};
+
+        if (invoiceId) {
+            const invoice = db.invoices.find((inv) => inv.id === invoiceId);
+            if (invoice) {
+                defaults.invoiceId = invoice.id;
+                defaults.contractId = invoice.contractId;
+                const remaining = Math.max(
+                    Number(invoice.amount || 0) + Number(invoice.taxAmount || 0) - Number(invoice.paidAmount || 0),
+                    0
+                );
+                defaults.amount = remaining;
+            }
+        }
+
+        if (!defaults.contractId && contractId) {
+            defaults.contractId = contractId;
+        }
+
+        setActiveTab('receipts');
+        setReceiptModalDefaults(defaults);
+
+        navigate('/financials?tab=receipts', { replace: true });
+    }, [db.invoices, location.search, navigate]);
 
     const requestConfirm = (message: string, action: () => Promise<void>) => {
         setConfirmState({ open: true, message, action, busy: false });
@@ -354,7 +400,13 @@ const Financials: React.FC = () => {
                     onTabClick={(id) => setActiveTab(id as any)}
                 />
                 <div className="pt-6">
-                    {activeTab === 'receipts' && <ReceiptsView requestConfirm={requestConfirm} />}
+                    {activeTab === 'receipts' && (
+                        <ReceiptsView
+                            requestConfirm={requestConfirm}
+                            receiptModalDefaults={receiptModalDefaults}
+                            onReceiptModalDefaultsConsumed={() => setReceiptModalDefaults(null)}
+                        />
+                    )}
                     {activeTab === 'expenses' && <ExpensesView requestConfirm={requestConfirm} />}
                     {activeTab === 'deposits' && <DepositsView requestConfirm={requestConfirm} />}
                     {activeTab === 'settlements' && <OwnerSettlementsView requestConfirm={requestConfirm} />}
@@ -372,7 +424,11 @@ const Financials: React.FC = () => {
     );
 };
 
-const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestConfirm }) => {
+const ReceiptsView: React.FC<{
+    requestConfirm: ConfirmRequest;
+    receiptModalDefaults?: ReceiptAllocationDefaults | null;
+    onReceiptModalDefaultsConsumed?: () => void;
+}> = ({ requestConfirm, receiptModalDefaults, onReceiptModalDefaultsConsumed }) => {
     const { db, financeService } = useApp();
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -390,6 +446,17 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
             })
             .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
     }, [db.receipts, db.contracts, db.tenants, searchTerm]);
+    const currency = db.settings?.currency || 'OMR';
+
+    useEffect(() => {
+        if (!receiptModalDefaults) return;
+        setIsAddModalOpen(true);
+    }, [receiptModalDefaults]);
+
+    const closeAddModal = () => {
+        setIsAddModalOpen(false);
+        onReceiptModalDefaultsConsumed?.();
+    };
 
     const printingReceiptContract = useMemo(
         () => (printingReceipt ? db.contracts.find((item) => item.id === printingReceipt.contractId) || null : null),
@@ -424,7 +491,13 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
                     <h2 className={sectionTitleCls}>سجلات القبض والتحصيل</h2>
                     <p className="mt-1 text-sm text-slate-500">إدارة سندات القبض وربطها بالفواتير المستحقة وإرسالها للمستأجرين.</p>
                 </div>
-                <button onClick={() => setIsAddModalOpen(true)} className={primaryButtonCls}>
+                <button
+                    onClick={() => {
+                        onReceiptModalDefaultsConsumed?.();
+                        setIsAddModalOpen(true);
+                    }}
+                    className={primaryButtonCls}
+                >
                     <ReceiptIcon size={16} />
                     إضافة سند قبض
                 </button>
@@ -453,7 +526,7 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
                                     <Td className="font-mono font-bold text-slate-800">{r.no}</Td>
                                     <Td className="whitespace-nowrap">{formatDateTime(r.dateTime)}</Td>
                                     <Td>{tenant?.name || '—'}</Td>
-                                    <Td className="font-bold text-emerald-600">{formatCurrency(r.amount, db.settings.currency)}</Td>
+                                    <Td className="font-bold text-emerald-600">{formatCurrency(r.amount, currency)}</Td>
                                     <Td>
                                         <StatusPill status={r.status}>{r.status === 'POSTED' ? 'مرحّل' : 'ملغي'}</StatusPill>
                                     </Td>
@@ -496,7 +569,9 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
                 />
             )}
 
-            {isAddModalOpen && <ReceiptAllocationModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} />}
+            {isAddModalOpen && (
+                <ReceiptAllocationModal isOpen={isAddModalOpen} onClose={closeAddModal} defaults={receiptModalDefaults} />
+            )}
             {isEditModalOpen && (
                 <EditReceiptForm
                     isOpen={isEditModalOpen}
@@ -889,8 +964,14 @@ const EditReceiptForm: React.FC<{ isOpen: boolean; onClose: () => void; receipt:
     );
 };
 
-const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ isOpen, onClose }) => {
+const ReceiptAllocationModal: React.FC<{
+    isOpen: boolean;
+    onClose: () => void;
+    defaults?: ReceiptAllocationDefaults | null;
+}> = ({ isOpen, onClose, defaults }) => {
     const { db, financeService } = useApp();
+    const currency = db.settings?.currency || 'OMR';
+    const preferredInvoiceId = defaults?.invoiceId || null;
     const [contractId, setContractId] = useState('');
     const [receiptData, setReceiptData] = useState({
         dateTime: new Date().toISOString().slice(0, 16),
@@ -903,10 +984,28 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
 
     const unpaidInvoices = useMemo(() => {
         if (!contractId) return [];
-        return db.invoices
+        const invoices = db.invoices
             .filter((inv) => inv.contractId === contractId && ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(inv.status))
             .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
-    }, [contractId, db.invoices]);
+
+        if (!preferredInvoiceId) return invoices;
+        // If the modal is opened from an invoice context, prioritize that invoice for auto-allocation.
+        return invoices.slice().sort((a, b) => {
+            if (a.id === preferredInvoiceId) return -1;
+            if (b.id === preferredInvoiceId) return 1;
+            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        });
+    }, [contractId, db.invoices, preferredInvoiceId]);
+
+    useEffect(() => {
+        if (!isOpen) return;
+        if (!defaults) return;
+
+        if (defaults.contractId) setContractId(defaults.contractId);
+        if (typeof defaults.amount === 'number') {
+            setReceiptData((prev) => ({ ...prev, amount: defaults.amount || 0 }));
+        }
+    }, [defaults, isOpen]);
 
     useEffect(() => {
         if (contractId && receiptData.amount > 0) {
@@ -946,6 +1045,11 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
             toast.error('يجب أن يساوي المبلغ المخصص إجمالي مبلغ السند.');
             return;
         }
+        const paymentAccount = db.settings?.accountMappings?.paymentMethods?.[receiptData.channel];
+        if (!paymentAccount) {
+            toast.error('طريقة الدفع غير مهيأة في إعدادات ربط الحسابات. يرجى مراجعة إعدادات الحسابات.');
+            return;
+        }
         try {
             const finalAllocations = Array.from(allocations.entries())
                 .filter(([, amount]) => amount > 0)
@@ -963,8 +1067,8 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
             <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 gap-4 rounded-2xl border border-slate-100 bg-slate-50/70 p-4 md:grid-cols-3">
                     <div>
-                        <label className="text-xs font-bold block mb-1">العقد</label>
-                        <select value={contractId} onChange={(e) => setContractId(e.target.value)} required>
+                        <label className={labelCls}>العقد</label>
+                        <select value={contractId} onChange={(e) => setContractId(e.target.value)} required className={inputCls}>
                             <option value="">-- اختر العقد --</option>
                             {db.contracts.map((c) => (
                                 <option key={c.id} value={c.id}>
@@ -974,31 +1078,55 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
                         </select>
                     </div>
                     <div>
-                        <label className="text-xs font-bold block mb-1">المبلغ المستلم</label>
+                        <label className={labelCls}>المبلغ المستلم</label>
                         <input
                             type="number"
                             value={receiptData.amount || ''}
                             onChange={(e) => setReceiptData({ ...receiptData, amount: Number(e.target.value) })}
                             required
+                            className={inputCls}
                         />
                     </div>
                     <div>
-                        <label className="text-xs font-bold block mb-1">الطريقة</label>
+                        <label className={labelCls}>طريقة الدفع</label>
                         <select
                             value={receiptData.channel}
                             onChange={(e) => setReceiptData({ ...receiptData, channel: e.target.value as any })}
+                            className={inputCls}
                         >
                             <option value="CASH">نقدي</option>
-                            <option value="BANK">تحويل</option>
-                            <option value="POS">شبكة</option>
+                            <option value="BANK">تحويل بنكي</option>
+                            <option value="CARD">شبكة / بطاقة</option>
+                            <option value="OTHER">أخرى</option>
                         </select>
                     </div>
+                    <div>
+                        <label className={labelCls}>المرجع</label>
+                        <input
+                            type="text"
+                            value={receiptData.ref}
+                            onChange={(e) => setReceiptData({ ...receiptData, ref: e.target.value })}
+                            placeholder="رقم التحويل / رقم الشبكة..."
+                            className={inputCls}
+                        />
+                    </div>
+                    <div>
+                        <label className={labelCls}>التاريخ</label>
+                        <input
+                            type="datetime-local"
+                            value={receiptData.dateTime}
+                            onChange={(e) => setReceiptData({ ...receiptData, dateTime: e.target.value })}
+                            className={inputCls}
+                        />
+                    </div>
                     <div className="md:col-span-3">
-                        <label className="text-xs font-bold block mb-1">ملاحظات</label>
+                        <label className={labelCls}>ملاحظات</label>
                         <textarea
                             value={receiptData.notes}
                             onChange={(e) => setReceiptData({ ...receiptData, notes: e.target.value })}
-                            rows={1}
+                            rows={2}
+                            placeholder="أي ملاحظة إضافية..."
+                            className={`${inputCls} min-h-[92px]`}
                         />
                     </div>
                 </div>
@@ -1022,7 +1150,7 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
                                             {formatDate(inv.dueDate)}
                                         </div>
                                         <div className="text-xs text-red-500">
-                                            مستحق: {formatCurrency(inv.amount + (inv.taxAmount || 0) - inv.paidAmount)}
+                                            مستحق: {formatCurrency(inv.amount + (inv.taxAmount || 0) - inv.paidAmount, currency)}
                                         </div>
                                         <div className="col-span-2">
                                             <input
@@ -1048,9 +1176,9 @@ const ReceiptAllocationModal: React.FC<{ isOpen: boolean; onClose: () => void }>
                                 isBalanced ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'
                             }`}
                         >
-                            <div>الإجمالي: {formatCurrency(receiptData.amount)}</div>
-                            <div>المخصص: {formatCurrency(totalAllocated)}</div>
-                            <div>المتبقي: {formatCurrency(remainingToAllocate)}</div>
+                            <div>الإجمالي: {formatCurrency(receiptData.amount, currency)}</div>
+                            <div>المخصص: {formatCurrency(totalAllocated, currency)}</div>
+                            <div>المتبقي: {formatCurrency(remainingToAllocate, currency)}</div>
                         </div>
                     </div>
                 )}

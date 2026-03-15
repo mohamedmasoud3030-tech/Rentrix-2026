@@ -14,6 +14,8 @@ interface ReceiptPrintableProps {
 const paymentChannelLabel = (channel?: string | null) => {
   if (channel === 'BANK') return 'تحويل بنكي';
   if (channel === 'CARD') return 'بطاقة / شبكة';
+  if (channel === 'POS') return 'شبكة / POS';
+  if (channel === 'OTHER') return 'أخرى';
   return 'نقدي';
 };
 

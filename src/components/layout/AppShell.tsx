@@ -88,6 +88,8 @@ const navGroups: NavGroup[] = [
       { label: 'العمولات', path: '/commissions', icon: <BadgeDollarSign size={18} /> },
       { label: 'المحاسبة', path: '/accounting', icon: <Calculator size={18} />, permission: 'VIEW_ACCOUNTING' },
       { label: 'كشف حساب المالك', path: '/owner-ledger', icon: <FileText size={18} /> },
+      { label: 'كشف حساب المستأجر', path: '/tenant-ledger', icon: <Users size={18} /> },
+      { label: 'كشف حساب المورد', path: '/supplier-ledger', icon: <Wallet size={18} /> },
     ],
   },
   {
@@ -139,6 +141,8 @@ const routeLabels: Record<string, string> = {
   '/invoices': 'الفواتير',
   '/accounting': 'المحاسبة',
   '/owner-ledger': 'كشف حساب المالك',
+  '/tenant-ledger': 'كشف حساب المستأجر',
+  '/supplier-ledger': 'كشف حساب المورد',
   '/maintenance': 'الصيانة',
   '/tasks': 'المهام والزيارات',
   '/leads': 'العملاء والفرص',

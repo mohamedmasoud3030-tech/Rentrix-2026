@@ -28,11 +28,17 @@ const OwnerLedgerReport: React.FC = () => {
   const currency = settings?.currency || 'OMR';
 
   const [ownerId, setOwnerId] = useState(presetOwnerId);
+  const [propertyId, setPropertyId] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [search, setSearch] = useState('');
   const [isPrintPreviewOpen, setIsPrintPreviewOpen] = useState(false);
   const [ledgerTab, setLedgerTab] = useState<'summary' | 'transactions'>('summary');
+
+  const ownerPropertyOptions = useMemo(() => {
+    if (!ownerId) return [];
+    return db.properties.filter((property) => property.ownerId === ownerId);
+  }, [db.properties, ownerId]);
 
   const report = useMemo(() => {
     if (!ownerId) return null;
@@ -40,7 +46,8 @@ const OwnerLedgerReport: React.FC = () => {
     const owner = db.owners.find((item) => item.id === ownerId);
     if (!owner) return null;
 
-    const properties = db.properties.filter((property) => property.ownerId === ownerId);
+    const allProperties = db.properties.filter((property) => property.ownerId === ownerId);
+    const properties = propertyId ? allProperties.filter((property) => property.id === propertyId) : allProperties;
     const propertyIds = new Set(properties.map((property) => property.id));
     const units = db.units.filter((unit) => propertyIds.has(unit.propertyId));
     const unitIds = new Set(units.map((unit) => unit.id));
@@ -72,15 +79,35 @@ const OwnerLedgerReport: React.FC = () => {
         };
       });
 
-    const ownerExpenses = db.expenses
-      .filter((expense) => expense.status === 'POSTED' && expense.chargedTo === 'OWNER' && contractIds.has(expense.contractId || '') && inRange(expense.dateTime))
-      .map((expense) => ({
-        id: expense.id,
-        date: expense.dateTime,
-        type: 'EXPENSE' as const,
-        label: `مصروف على المالك • ${expense.category || 'مصروف'}${expense.notes ? ` • ${expense.notes}` : ''}`,
-        gross: -Math.abs(expense.amount),
-      }));
+    const ownerExpenseRows = db.expenses
+      .filter((expense) => expense.status === 'POSTED' && expense.chargedTo === 'OWNER' && inRange(expense.dateTime))
+      .filter((expense) => {
+        if (expense.contractId && contractIds.has(expense.contractId)) return true;
+        if (expense.propertyId && propertyIds.has(expense.propertyId)) return true;
+        if (expense.unitId && unitIds.has(expense.unitId)) return true;
+        return false;
+      });
+
+    const ownerExpenses = ownerExpenseRows.map((expense) => ({
+      id: expense.id,
+      date: expense.dateTime,
+      type: 'EXPENSE' as const,
+      label: `مصروف على المالك • ${expense.category || 'مصروف'}${expense.notes ? ` • ${expense.notes}` : ''}`,
+      gross: -Math.abs(expense.amount),
+    }));
+
+    const isMaintenanceExpense = (category?: string | null) => {
+      const c = String(category || '').toLowerCase();
+      return c.includes('صيانة') || c.includes('maint');
+    };
+
+    const maintenanceExpensesTotal = ownerExpenseRows
+      .filter((expense) => isMaintenanceExpense(expense.category))
+      .reduce((sum, expense) => sum + Math.abs(Number(expense.amount || 0)), 0);
+
+    const otherExpensesTotal = ownerExpenseRows
+      .filter((expense) => !isMaintenanceExpense(expense.category))
+      .reduce((sum, expense) => sum + Math.abs(Number(expense.amount || 0)), 0);
 
     const settlements = db.ownerSettlements
       .filter((settlement) => settlement.ownerId === ownerId && settlement.status === 'POSTED' && inRange(settlement.date))
@@ -178,6 +205,13 @@ const OwnerLedgerReport: React.FC = () => {
       return new Date(invoice.dueDate).getTime() < now;
     });
 
+    const unpaidRentTotal = db.invoices
+      .filter((invoice) => contractIds.has(invoice.contractId) && invoice.status !== 'VOID' && invoice.type === 'RENT' && inRange(invoice.dueDate))
+      .reduce((sum, invoice) => {
+        const outstanding = Math.max(Number(invoice.amount || 0) + Number(invoice.taxAmount || 0) - Number(invoice.paidAmount || 0), 0);
+        return sum + outstanding;
+      }, 0);
+
     const openMaintenance = db.maintenanceRecords.filter((record) => {
       if (!unitIds.has(record.unitId)) return false;
       return ['NEW', 'OPEN', 'IN_PROGRESS'].includes(record.status);
@@ -210,14 +244,17 @@ const OwnerLedgerReport: React.FC = () => {
       outstandingBalance,
       commissionTypeLabel,
       grossCollections,
+      unpaidRentTotal,
       ownerExpensesTotal,
+      maintenanceExpensesTotal,
+      otherExpensesTotal,
       settlementsTotal,
       officeShare,
       beforeCommission,
       afterCommission,
       transactions: filteredBySearch,
     };
-  }, [db, ownerId, startDate, endDate, search]);
+  }, [db, endDate, ownerId, propertyId, search, startDate]);
 
   const chartBars = useMemo(() => {
     if (!report) return [];
@@ -288,12 +325,35 @@ const OwnerLedgerReport: React.FC = () => {
       </div>
 
       <WorkspaceSection title="تصفية كشف الحساب" description="حدد المالك والفترة المطلوبة قبل عرض البيانات.">
-        <FormSection title="اختيار المالك والفترة" columns={3}>
+        <FormSection title="اختيار المالك والفترة" columns={4}>
           <div>
             <label className="mb-1.5 block text-xs font-bold text-slate-600">اختر المالك</label>
-            <select className={inputCls} value={ownerId} onChange={(e) => setOwnerId(e.target.value)}>
+            <select
+              className={inputCls}
+              value={ownerId}
+              onChange={(e) => {
+                setOwnerId(e.target.value);
+                setPropertyId('');
+              }}
+            >
               <option value="">-- اختر مالك العقار --</option>
               {db.owners.map((owner) => <option key={owner.id} value={owner.id}>{owner.name}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-xs font-bold text-slate-600">العقار</label>
+            <select
+              className={inputCls}
+              value={propertyId}
+              onChange={(e) => setPropertyId(e.target.value)}
+              disabled={!ownerId}
+            >
+              <option value="">كل العقارات</option>
+              {ownerPropertyOptions.map((property) => (
+                <option key={property.id} value={property.id}>
+                  {property.name}
+                </option>
+              ))}
             </select>
           </div>
           <div>
@@ -330,6 +390,12 @@ const OwnerLedgerReport: React.FC = () => {
             <SummaryStatCard title="مصروفات المالك" value={formatCurrency(report.ownerExpensesTotal, currency)} icon={<Wallet size={18} />} color="rose" />
             <SummaryStatCard title="قبل العمولة" value={formatCurrency(report.beforeCommission, currency)} icon={<Landmark size={18} />} color="amber" />
             <SummaryStatCard title="بعد العمولة" value={formatCurrency(report.afterCommission, currency)} icon={<BarChart3 size={18} />} color="emerald" />
+          </div>
+
+          <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <SummaryStatCard title="إيجار غير محصل" value={formatCurrency(report.unpaidRentTotal, currency)} icon={<AlertTriangle size={18} />} color="amber" subtext="رصيد فواتير الإيجار المفتوحة" />
+            <SummaryStatCard title="مصروفات صيانة" value={formatCurrency(report.maintenanceExpensesTotal, currency)} icon={<Wrench size={18} />} color="rose" subtext="مصروفات محملة على المالك" />
+            <SummaryStatCard title="الرصيد بعد التسويات" value={formatCurrency(report.outstandingBalance, currency)} icon={<ShieldAlert size={18} />} color={report.outstandingBalance >= 0 ? 'emerald' : 'rose'} subtext="صافي المستحق للمالك" />
           </div>
 
           <div className="mt-4">
@@ -551,6 +617,7 @@ const OwnerLedgerReport: React.FC = () => {
                 metadata={[
                   { label: 'المالك', value: report.owner.name },
                   { label: 'نظام العمولة', value: report.commissionTypeLabel },
+                  { label: 'العقار', value: propertyId ? (report.properties[0]?.name || '—') : 'كل العقارات' },
                   {
                     label: 'الفترة',
                     value: startDate || endDate
