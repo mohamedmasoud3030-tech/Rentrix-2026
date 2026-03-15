@@ -49,30 +49,32 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
 
   return (
     <div className="erp-toolbar">
-      <div className="flex flex-1 flex-col gap-2 lg:flex-row lg:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={15} />
+      <div className="flex flex-1 flex-col gap-2.5 xl:flex-row xl:items-center">
+        <div className="relative min-w-0 flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500" size={16} />
           <input
             type="text"
             value={query}
-            className="w-full rounded-2xl border border-slate-200/80 bg-white/85 py-2 pl-9 pr-3.5 text-sm font-medium text-slate-800 shadow-sm backdrop-blur-sm transition-all duration-150 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-900"
+            className="w-full rounded-[22px] border border-slate-200/80 bg-white/84 py-2.5 pl-9 pr-4 text-sm font-medium text-slate-800 shadow-sm backdrop-blur-md transition-all duration-150 placeholder:text-slate-400 focus:border-blue-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 dark:border-slate-700/90 dark:bg-slate-900/86 dark:text-slate-100 dark:placeholder:text-slate-500 dark:focus:border-blue-400 dark:focus:bg-slate-900"
             placeholder={placeholder || 'ابحث داخل السجلات'}
             onChange={(event) => handleChange(event.target.value)}
           />
         </div>
 
-        {rightSlot ? <div className="flex flex-wrap items-center gap-2 lg:justify-end">{rightSlot}</div> : null}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          {rightSlot ? <div className="flex flex-wrap items-center gap-2">{rightSlot}</div> : null}
 
-        {onFilter ? (
-          <button
-            type="button"
-            onClick={onFilter}
-            className="inline-flex min-h-[38px] items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/85 px-3.5 py-2 text-sm font-bold text-slate-700 shadow-sm backdrop-blur-sm transition-colors hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900/90 dark:text-slate-200 dark:hover:bg-slate-800"
-          >
-            <SlidersHorizontal size={16} />
-            تصفية
-          </button>
-        ) : null}
+          {onFilter ? (
+            <button
+              type="button"
+              onClick={onFilter}
+              className="inline-flex min-h-[42px] items-center justify-center gap-2 rounded-[20px] border border-slate-200/80 bg-white/86 px-4 py-2 text-sm font-bold text-slate-700 shadow-sm backdrop-blur-md transition-colors hover:bg-slate-50 dark:border-slate-700/90 dark:bg-slate-900/86 dark:text-slate-200 dark:hover:bg-slate-800"
+            >
+              <SlidersHorizontal size={16} />
+              تصفية
+            </button>
+          ) : null}
+        </div>
       </div>
 
       {(filterChips.length > 0 || onClearAll) ? (
@@ -93,7 +95,7 @@ const SearchFilterBar: React.FC<SearchFilterBarProps> = ({
             <button
               type="button"
               onClick={onClearAll}
-              className="inline-flex min-h-[32px] items-center rounded-full border border-transparent px-2 py-1 text-xs font-bold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+              className="inline-flex min-h-[34px] items-center rounded-full border border-transparent px-2.5 py-1 text-xs font-bold text-slate-500 transition-colors hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
             >
               مسح الكل
             </button>

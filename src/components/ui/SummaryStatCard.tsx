@@ -23,16 +23,31 @@ const SummaryStatCard: React.FC<SummaryStatCardProps> = ({ label, title, value, 
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-[20px] border border-slate-200/80 bg-white/92 p-3 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:border-slate-800/90 dark:bg-slate-900/88">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-slate-700/70" />
-      <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-primary/50 via-primary/20 to-transparent" />
-      <div className="flex items-start gap-2.5">
-        <div className={`flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-[13px] ${colorClasses[color]}`}>{icon}</div>
+    <div className="group relative overflow-hidden rounded-[24px] border border-slate-200/80 bg-white/88 p-3.5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:border-slate-800/90 dark:bg-slate-900/86">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-slate-700/70" />
+      <div className="absolute -left-6 top-2 h-24 w-24 rounded-full bg-slate-100/80 blur-2xl dark:bg-slate-800/70" />
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="text-[10px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{title || label}</p>
-          <p className="mt-1 break-words text-[1.15rem] font-black tracking-tight text-slate-900 dark:text-slate-50 sm:text-[1.2rem]">{value}</p>
-          {subtext && <p className="mt-0.5 text-[11px] leading-4.5 text-slate-500 dark:text-slate-400">{subtext}</p>}
+          <p className="text-[10px] font-extrabold tracking-[0.14em] text-slate-500 dark:text-slate-400">{title || label}</p>
+          <p className="mt-2 break-words text-[1.35rem] font-black tracking-tight text-slate-950 dark:text-slate-50 sm:text-[1.5rem]">{value}</p>
+          {subtext && <p className="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">{subtext}</p>}
         </div>
+        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-[16px] ${colorClasses[color]}`}>{icon}</div>
+      </div>
+
+      <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div
+          className={`h-full rounded-full ${
+            color === 'rose'
+              ? 'bg-rose-400/90'
+              : color === 'amber'
+                ? 'bg-amber-400/90'
+                : color === 'emerald' || color === 'success'
+                  ? 'bg-emerald-400/90'
+                  : 'bg-sky-400/90'
+          }`}
+          style={{ width: '58%' }}
+        />
       </div>
     </div>
   );

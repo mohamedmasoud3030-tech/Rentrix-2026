@@ -21,28 +21,28 @@ const KpiCard: React.FC<KpiCardProps> = ({ title, value, icon, color = 'blue', t
   const c = colorMap[color] ?? colorMap.blue;
 
   return (
-    <div className={`relative flex min-h-[118px] flex-col gap-2.5 overflow-hidden rounded-[22px] border ${c.border} bg-white/92 p-3.5 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:bg-slate-900/88`}>
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/80 to-transparent dark:via-slate-700/70" />
-      <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-primary/45 via-primary/10 to-transparent" />
+    <div className={`relative flex min-h-[126px] flex-col gap-3 overflow-hidden rounded-[26px] border ${c.border} bg-white/88 p-4 shadow-brand backdrop-blur-xl transition-all duration-200 hover:-translate-y-0.5 hover:shadow-brand-lg dark:bg-slate-900/86`}>
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent dark:via-slate-700/70" />
+      <div className="absolute -right-6 top-2 h-24 w-24 rounded-full bg-slate-100/80 blur-2xl dark:bg-slate-800/70" />
       <div className="flex items-start justify-between">
         {icon && (
-          <div className={`rounded-[15px] p-2 ${c.icon}`}>
+          <div className={`rounded-[16px] p-2.5 ${c.icon}`}>
             <div className="flex h-4 w-4 items-center justify-center">{icon}</div>
           </div>
         )}
         {trend && (
-          <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${trendUp ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300'}`}>
+          <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold ${trendUp ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-300' : 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300'}`}>
             {trend}
           </span>
         )}
       </div>
 
       <div>
-        <p className="mb-1 text-[10px] font-extrabold tracking-[0.16em] text-slate-500 dark:text-slate-400">{title}</p>
-        <p className={`break-words text-[1.35rem] font-black tracking-tight sm:text-[1.45rem] ${c.accent}`}>{value}</p>
+        <p className="mb-1 text-[10px] font-extrabold tracking-[0.14em] text-slate-500 dark:text-slate-400">{title}</p>
+        <p className={`break-words text-[1.5rem] font-black tracking-tight sm:text-[1.65rem] ${c.accent}`}>{value}</p>
       </div>
 
-      <div className={`absolute -bottom-5 -left-5 h-16 w-16 rounded-full opacity-60 blur-2xl ${c.bg.split(' ')[0]}`} />
+      <div className={`absolute bottom-3 left-4 h-1.5 w-[38%] rounded-full ${c.bg.split(' ')[0]}`} />
     </div>
   );
 };

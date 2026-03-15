@@ -27,48 +27,51 @@
 }
 
 :root {
-  --primary: 208 72% 42%;
+  --primary: 206 79% 44%;
   --primary-foreground: 210 40% 98%;
-  --primary-light: 208 82% 95%;
-  --background: 42 24% 97%;
-  --foreground: 216 17% 31%;
-  --card: 0 0% 100%;
-  --card-foreground: 218 20% 30%;
-  --heading: 219 24% 16%;
-  --border: 34 15% 84%;
-  --input: 42 24% 95%;
-  --muted-foreground: 218 10% 45%;
-  --success: 159 60% 33%;
+  --primary-light: 206 92% 96%;
+  --background: 40 24% 96%;
+  --foreground: 218 20% 27%;
+  --card: 0 0% 99%;
+  --card-foreground: 220 20% 26%;
+  --heading: 222 32% 15%;
+  --border: 220 16% 86%;
+  --input: 42 18% 95%;
+  --muted-foreground: 218 10% 47%;
+  --success: 158 61% 34%;
   --success-foreground: 141 94% 97%;
-  --warning: 36 88% 45%;
+  --warning: 35 91% 48%;
   --warning-foreground: 45 93% 96%;
-  --danger: 0 68% 51%;
+  --danger: 353 74% 54%;
   --danger-foreground: 0 86% 97%;
-  --neutral: 38 18% 92%;
-  --neutral-foreground: 218 20% 30%;
-  --radius: 1.125rem;
+  --neutral: 40 18% 91%;
+  --neutral-foreground: 218 20% 28%;
+  --radius: 1.25rem;
   --topbar-height: 64px;
-  --shadow-brand: 0 20px 40px -28px rgb(51 65 85 / 0.14), 0 8px 20px -18px rgb(15 23 42 / 0.08);
-  --shadow-brand-lg: 0 26px 58px -30px rgb(51 65 85 / 0.18), 0 14px 28px -22px rgb(15 23 42 / 0.10);
-  --page-padding: 1rem;
-  --density-1: 0.75rem;
-  --density-2: 0.625rem;
+  --shadow-brand: 0 18px 46px -30px rgb(15 23 42 / 0.16), 0 12px 28px -24px rgb(15 23 42 / 0.08);
+  --shadow-brand-lg: 0 28px 70px -34px rgb(15 23 42 / 0.20), 0 18px 34px -24px rgb(15 23 42 / 0.11);
+  --page-padding: 1.125rem;
+  --density-1: 0.875rem;
+  --density-2: 0.7rem;
   --density-3: 0.5rem;
 }
 
 [data-theme="dark"] {
-  --primary: 201 78% 66%;
-  --primary-foreground: 215 33% 12%;
-  --background: 220 24% 12%;
-  --foreground: 214 17% 82%;
-  --card: 220 20% 15%;
-  --card-foreground: 214 17% 82%;
-  --heading: 42 20% 96%;
-  --border: 218 14% 25%;
-  --input: 219 16% 18%;
-  --muted-foreground: 214 12% 64%;
-  --neutral: 219 14% 21%;
-  --neutral-foreground: 213 15% 74%;
+  --primary: 201 88% 70%;
+  --primary-foreground: 216 32% 12%;
+  --primary-light: 202 66% 18%;
+  --background: 222 28% 11%;
+  --foreground: 214 20% 84%;
+  --card: 223 24% 14%;
+  --card-foreground: 214 17% 84%;
+  --heading: 42 24% 96%;
+  --border: 221 18% 25%;
+  --input: 221 18% 18%;
+  --muted-foreground: 216 12% 65%;
+  --neutral: 221 18% 20%;
+  --neutral-foreground: 215 18% 78%;
+  --shadow-brand: 0 26px 62px -34px rgb(2 6 23 / 0.62), 0 14px 30px -20px rgb(2 6 23 / 0.36);
+  --shadow-brand-lg: 0 36px 84px -36px rgb(2 6 23 / 0.7), 0 18px 42px -24px rgb(2 6 23 / 0.42);
 }
 
 * {
@@ -87,13 +90,14 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   background-image:
-    radial-gradient(circle at top right, rgb(14 165 233 / 0.09), transparent 24%),
-    radial-gradient(circle at 10% 18%, rgb(15 23 42 / 0.04), transparent 28%),
-    radial-gradient(circle at bottom left, rgb(245 158 11 / 0.06), transparent 22%),
-    linear-gradient(180deg, rgba(255,255,255,0.58), rgba(255,255,255,0.18));
+    radial-gradient(circle at top right, rgb(14 165 233 / 0.11), transparent 22%),
+    radial-gradient(circle at 8% 16%, rgb(30 64 175 / 0.05), transparent 26%),
+    radial-gradient(circle at 78% 78%, rgb(245 158 11 / 0.07), transparent 22%),
+    linear-gradient(180deg, rgba(255,255,255,0.82), rgba(255,255,255,0.44) 38%, rgba(248,250,252,0.9));
   margin: 0;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  background-attachment: fixed;
 }
 
 html,
@@ -104,10 +108,10 @@ body,
 
 [data-theme="dark"] body {
   background-image:
-    radial-gradient(circle at top right, rgb(14 165 233 / 0.11), transparent 24%),
-    radial-gradient(circle at 20% 18%, rgb(59 130 246 / 0.05), transparent 22%),
-    radial-gradient(circle at bottom left, rgb(245 158 11 / 0.06), transparent 18%),
-    linear-gradient(180deg, rgba(30,41,59,0.42), rgba(30,41,59,0.08));
+    radial-gradient(circle at top right, rgb(14 165 233 / 0.14), transparent 24%),
+    radial-gradient(circle at 18% 18%, rgb(59 130 246 / 0.08), transparent 22%),
+    radial-gradient(circle at 82% 76%, rgb(245 158 11 / 0.08), transparent 16%),
+    linear-gradient(180deg, rgba(15,23,42,0.84), rgba(15,23,42,0.92));
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -116,15 +120,15 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .app-page {
-  @apply mx-auto w-full max-w-[1600px] space-y-3;
+  @apply mx-auto w-full max-w-[1520px] space-y-4;
 }
 
 .erp-panel {
-  @apply rounded-[22px] border border-slate-200/80 bg-white/92 p-3.5 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
+  @apply rounded-[28px] border border-slate-200/80 bg-white/88 p-4 shadow-brand backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/86;
 }
 
 .erp-toolbar {
-  @apply flex flex-col gap-2 rounded-[20px] border border-slate-200/70 bg-white/80 p-2.5 shadow-sm dark:border-slate-700 dark:bg-slate-900/80 md:flex-row md:items-center md:justify-between;
+  @apply flex flex-col gap-2.5 rounded-[24px] border border-slate-200/80 bg-white/82 p-3 shadow-sm backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/80 md:flex-row md:items-center md:justify-between;
 }
 
 .erp-kicker {
@@ -152,8 +156,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 input, select, textarea {
-  @apply w-full rounded-2xl border border-border bg-white/80 px-3.5 py-2.5 text-sm shadow-sm backdrop-blur-sm transition-all;
-  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary;
+  @apply w-full rounded-2xl border border-border bg-white/78 px-3.5 py-2.5 text-sm shadow-sm backdrop-blur-sm transition-all;
+  @apply focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary;
   @apply min-h-[44px];
 }
 
@@ -169,19 +173,19 @@ select {
 
 .btn {
   @apply inline-flex items-center justify-center rounded-2xl text-sm font-bold ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
-  @apply h-10 px-4 py-2 active:scale-95 select-none;
+  @apply h-10 px-4 py-2 active:scale-[0.98] select-none;
   @apply min-h-[44px];
 }
 
 .btn-primary { @apply bg-primary text-primary-foreground hover:bg-primary/90 shadow-brand; }
-.btn-danger { @apply bg-danger text-danger-foreground hover:bg-danger/90; }
-.btn-warning { @apply bg-warning text-warning-foreground hover:bg-warning/90; }
-.btn-secondary { @apply border border-border bg-card/85 text-heading hover:bg-background; }
+.btn-danger { @apply bg-danger text-danger-foreground hover:bg-danger/90 shadow-sm; }
+.btn-warning { @apply bg-warning text-warning-foreground hover:bg-warning/90 shadow-sm; }
+.btn-secondary { @apply border border-border bg-card/88 text-heading hover:bg-background/92; }
 .btn-ghost { @apply text-foreground hover:bg-background/80; }
 .btn-sm { @apply h-8 rounded-xl px-3 text-xs min-h-[34px]; }
 
 table { @apply w-full text-sm; }
-th { @apply p-2.5 text-right text-[10px] font-extrabold uppercase tracking-[0.18em] text-muted-foreground border-b border-border; }
+th { @apply p-2.5 text-right text-[10px] font-extrabold tracking-[0.08em] text-muted-foreground border-b border-border; }
 td { @apply border-b border-border p-2.5 align-middle; }
 tr:last-child td { @apply border-b-0; }
 tbody tr { @apply transition-colors; }
@@ -195,7 +199,7 @@ tfoot td { @apply font-bold text-heading; }
 .status-pill { @apply inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-bold; }
 
 .erp-surface {
-  @apply rounded-[24px] border border-slate-200/80 bg-white/88 shadow-brand backdrop-blur-sm dark:border-slate-800 dark:bg-slate-900/88;
+  @apply rounded-[28px] border border-slate-200/80 bg-white/88 shadow-brand backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-900/86;
 }
 
 .erp-section-title {
@@ -207,7 +211,7 @@ tfoot td { @apply font-bold text-heading; }
 }
 
 .erp-empty {
-  @apply rounded-[20px] border border-dashed border-slate-200 bg-slate-50/70 px-4 py-8 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/55 dark:text-slate-400;
+  @apply rounded-[24px] border border-dashed border-slate-200 bg-slate-50/70 px-5 py-10 text-center text-sm text-slate-500 dark:border-slate-700 dark:bg-slate-800/55 dark:text-slate-400;
 }
 
 .erp-table-card {
@@ -219,7 +223,7 @@ tfoot td { @apply font-bold text-heading; }
 }
 
 .erp-chip {
-  @apply inline-flex min-h-[32px] items-center gap-1.5 rounded-full border border-slate-200/80 bg-slate-50 px-3 py-1 text-xs font-extrabold text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
+  @apply inline-flex min-h-[34px] items-center gap-1.5 rounded-full border border-slate-200/80 bg-white/80 px-3 py-1 text-xs font-extrabold text-slate-600 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200;
 }
 
 .erp-stack {
@@ -260,7 +264,7 @@ tfoot td { @apply font-bold text-heading; }
 
   .erp-panel,
   .erp-toolbar {
-    @apply rounded-[18px] p-3;
+    @apply rounded-[22px] p-3;
   }
 
   .responsive-table thead { display: none; }
