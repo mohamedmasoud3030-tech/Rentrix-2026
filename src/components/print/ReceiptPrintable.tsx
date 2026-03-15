@@ -1,41 +1,72 @@
 import React from 'react';
 import { Receipt, Settings } from '../../types';
 import { formatCurrency, formatDate } from '../../utils/helpers';
+import DocumentLayout, { DocumentInfoGrid, DocumentSection } from './DocumentLayout';
 
 interface ReceiptPrintableProps {
   receipt: Receipt;
   settings?: Settings | null;
+  tenantName?: string;
+  unitName?: string;
+  propertyName?: string;
 }
 
-const Header: React.FC<{ settings?: Settings | null; title: string }> = ({ settings, title }) => {
-  const company = settings?.company;
-  return (
-    <div className="border-b border-slate-200 pb-5">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-2 text-sm text-slate-600">
-          <div className="text-lg font-black text-slate-900">{company?.name || 'بيانات الشركة غير مكتملة'}</div>
-          <div>{company?.address || '—'}</div>
-          <div>{company?.phone || '—'}</div>
-          <div>{company?.email || '—'}</div>
-        </div>
-        {company?.logoDataUrl ? <img src={company.logoDataUrl} alt="شعار الشركة" className="h-16 w-16 rounded-2xl object-contain" /> : null}
-      </div>
-      <div className="mt-5 text-xl font-black text-slate-900">{title}</div>
-    </div>
-  );
+const paymentChannelLabel = (channel?: string | null) => {
+  if (channel === 'BANK') return 'تحويل بنكي';
+  if (channel === 'CARD') return 'بطاقة / شبكة';
+  return 'نقدي';
 };
 
-export const ReceiptPrintable: React.FC<ReceiptPrintableProps> = ({ receipt, settings }) => {
+const receiptStatusLabel = (status: Receipt['status']) => (status === 'POSTED' ? 'مرحّل' : 'ملغي');
+
+export const ReceiptPrintable: React.FC<ReceiptPrintableProps> = ({
+  receipt,
+  settings,
+  tenantName,
+  unitName,
+  propertyName,
+}) => {
+  const documentNumber = receipt.no || receipt.id.slice(0, 8).toUpperCase();
+
   return (
-    <div className="space-y-6 p-8 text-right" dir="rtl">
-      <Header settings={settings} title="سند قبض" />
-      <div className="grid grid-cols-2 gap-4 text-sm">
-        <div><strong>رقم السند:</strong> {receipt.no}</div>
-        <div><strong>التاريخ:</strong> {formatDate(receipt.dateTime)}</div>
-        <div><strong>المبلغ:</strong> {formatCurrency(receipt.amount, settings?.currency || 'OMR')}</div>
-        <div><strong>طريقة الدفع:</strong> {receipt.channel}</div>
-        <div className="col-span-2"><strong>ملاحظات:</strong> {receipt.notes || '—'}</div>
+    <DocumentLayout
+      settings={settings}
+      title="سند قبض"
+      subtitle={`مرجع السند: ${documentNumber}`}
+      badge="مستند مالي مطبوع"
+    >
+      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        <DocumentSection title="بيانات السند">
+          <DocumentInfoGrid
+            items={[
+              { label: 'رقم السند', value: documentNumber },
+              { label: 'الحالة', value: receiptStatusLabel(receipt.status) },
+              { label: 'التاريخ', value: formatDate(receipt.dateTime) },
+              { label: 'المبلغ', value: formatCurrency(receipt.amount, settings?.currency || 'OMR') },
+              { label: 'طريقة الدفع', value: paymentChannelLabel(receipt.channel) },
+              { label: 'المرجع', value: receipt.ref || '—' },
+            ]}
+          />
+        </DocumentSection>
+
+        <DocumentSection title="الارتباطات" tone="soft">
+          <div className="space-y-3">
+            <div className="rounded-[20px] border border-slate-200/80 bg-white/80 px-4 py-3">
+              <div className="text-[11px] font-extrabold tracking-[0.08em] text-slate-500">المستأجر</div>
+              <div className="mt-2 text-sm font-bold text-slate-900">{tenantName || 'غير محدد'}</div>
+            </div>
+            <div className="rounded-[20px] border border-slate-200/80 bg-white/80 px-4 py-3">
+              <div className="text-[11px] font-extrabold tracking-[0.08em] text-slate-500">الوحدة / العقار</div>
+              <div className="mt-2 text-sm font-bold text-slate-900">{unitName || 'وحدة غير محددة'}</div>
+              {propertyName ? <div className="mt-1 text-xs text-slate-500">{propertyName}</div> : null}
+            </div>
+          </div>
+        </DocumentSection>
       </div>
-    </div>
+
+      <DocumentSection title="ملاحظات السند" tone="soft">
+        <p className="text-sm leading-8 text-slate-700">{receipt.notes || 'لا توجد ملاحظات مرفقة على هذا السند.'}</p>
+      </DocumentSection>
+    </DocumentLayout>
   );
 };

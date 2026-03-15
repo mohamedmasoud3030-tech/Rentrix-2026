@@ -131,6 +131,15 @@ const Invoices: React.FC = () => {
         return { contract, property, owner, receipts, balance };
     }, [db.contracts, db.owners, db.properties, db.receipts, selectedInvoice]);
 
+    const printingInvoiceWorkspace = useMemo(() => {
+        if (!printingInvoice) return null;
+        const contract = db.contracts.find((item) => item.id === printingInvoice.contractId) || null;
+        const tenant = contract ? db.tenants.find((item) => item.id === contract.tenantId) || null : null;
+        const unit = contract ? db.units.find((item) => item.id === contract.unitId) || null : null;
+        const property = unit ? db.properties.find((item) => item.id === unit.propertyId) || null : null;
+        return { contract, tenant, unit, property };
+    }, [db.contracts, db.properties, db.tenants, db.units, printingInvoice]);
+
     return (
         <div className="app-page page-enter" dir="rtl">
             <PageHeader title="الفواتير والمطالبات المالية" description="مساحة عمل للفوترة والتحصيل وربط الفاتورة بالمستأجر والعقد والوحدة." />
@@ -308,7 +317,21 @@ const Invoices: React.FC = () => {
                         exportInvoiceToPdf(printingInvoice, tenant, contract, db.settings);
                     }}
                 >
-                    <InvoicePrintable invoice={printingInvoice} settings={db.settings} />
+                    <InvoicePrintable
+                        invoice={printingInvoice}
+                        settings={db.settings}
+                        tenantName={
+                            printingInvoiceWorkspace?.tenant?.name ||
+                            printingInvoiceWorkspace?.tenant?.fullName ||
+                            'مستأجر غير محدد'
+                        }
+                        unitName={
+                            printingInvoiceWorkspace?.unit?.name ||
+                            printingInvoiceWorkspace?.unit?.unitNumber ||
+                            'وحدة غير محددة'
+                        }
+                        propertyName={printingInvoiceWorkspace?.property?.name || 'عقار غير محدد'}
+                    />
                 </PrintPreviewModal>
             )}
         </div>

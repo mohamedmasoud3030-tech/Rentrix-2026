@@ -10,6 +10,10 @@ const PrintReceipt: React.FC = () => {
 
   const receipt = db.receipts.find((r) => r.id === id);
   const settings = db.settings;
+  const contract = receipt ? db.contracts.find((item) => item.id === receipt.contractId) : null;
+  const tenant = contract ? db.tenants.find((item) => item.id === contract.tenantId) : null;
+  const unit = contract ? db.units.find((item) => item.id === contract.unitId) : null;
+  const property = unit ? db.properties.find((item) => item.id === unit.propertyId) : null;
 
   useEffect(() => {
     if (receipt) {
@@ -28,7 +32,13 @@ const PrintReceipt: React.FC = () => {
 
   return (
     <div className="p-4" dir="rtl">
-      <ReceiptPrintable receipt={receipt} settings={settings} />
+      <ReceiptPrintable
+        receipt={receipt}
+        settings={settings}
+        tenantName={tenant?.name || tenant?.fullName || 'مستأجر غير محدد'}
+        unitName={unit?.name || unit?.unitNumber || 'وحدة غير محددة'}
+        propertyName={property?.name || 'عقار غير محدد'}
+      />
     </div>
   );
 };

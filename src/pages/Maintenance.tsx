@@ -203,6 +203,17 @@ const Maintenance: React.FC = () => {
     return { unit, property, activeContract, tenant, expense, invoice };
   }, [db.contracts, db.expenses, db.invoices, db.properties, db.tenants, db.units, selectedRecord]);
 
+  const printingMaintenanceWorkspace = useMemo(() => {
+    if (!printingRecord) return null;
+
+    const unit = printingRecord.unitId ? db.units.find((item) => item.id === printingRecord.unitId) || null : null;
+    const property = unit
+      ? db.properties.find((item) => item.id === unit.propertyId) || null
+      : db.properties.find((item) => item.id === printingRecord.propertyId) || null;
+
+    return { unit, property };
+  }, [db.properties, db.units, printingRecord]);
+
   const activeFilterChips = [
     ...(searchTerm ? [{ key: 'search', label: `بحث: ${searchTerm}` }] : []),
     ...(statusFilter !== 'ALL' ? [{ key: 'status', label: `الحالة: ${getStatusLabel(statusFilter)}` }] : []),
@@ -423,7 +434,12 @@ const Maintenance: React.FC = () => {
             exportMaintenanceRecordToPdf(printingRecord, unit, property, db.settings);
           }}
         >
-          <MaintenancePrintable record={printingRecord} settings={db.settings} />
+          <MaintenancePrintable
+            record={printingRecord}
+            settings={db.settings}
+            propertyName={printingMaintenanceWorkspace?.property?.name || 'عقار غير محدد'}
+            unitName={displayUnitName(printingMaintenanceWorkspace?.unit)}
+          />
         </PrintPreviewModal>
       ) : null}
 

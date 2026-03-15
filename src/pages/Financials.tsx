@@ -391,6 +391,32 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
             .sort((a, b) => new Date(b.dateTime).getTime() - new Date(a.dateTime).getTime());
     }, [db.receipts, db.contracts, db.tenants, searchTerm]);
 
+    const printingReceiptContract = useMemo(
+        () => (printingReceipt ? db.contracts.find((item) => item.id === printingReceipt.contractId) || null : null),
+        [db.contracts, printingReceipt]
+    );
+    const printingReceiptTenant = useMemo(
+        () =>
+            printingReceiptContract
+                ? db.tenants.find((item) => item.id === printingReceiptContract.tenantId) || null
+                : null,
+        [db.tenants, printingReceiptContract]
+    );
+    const printingReceiptUnit = useMemo(
+        () =>
+            printingReceiptContract
+                ? db.units.find((item) => item.id === printingReceiptContract.unitId) || null
+                : null,
+        [db.units, printingReceiptContract]
+    );
+    const printingReceiptProperty = useMemo(
+        () =>
+            printingReceiptUnit
+                ? db.properties.find((item) => item.id === printingReceiptUnit.propertyId) || null
+                : null,
+        [db.properties, printingReceiptUnit]
+    );
+
     return (
         <div className="space-y-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -494,7 +520,13 @@ const ReceiptsView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
                         exportReceiptToPdf(printingReceipt, tenant, db.settings);
                     }}
                 >
-                    <ReceiptPrintable receipt={printingReceipt} settings={db.settings} />
+                    <ReceiptPrintable
+                        receipt={printingReceipt}
+                        settings={db.settings}
+                        tenantName={printingReceiptTenant?.name || printingReceiptTenant?.fullName || 'مستأجر غير محدد'}
+                        unitName={printingReceiptUnit?.name || printingReceiptUnit?.unitNumber || 'وحدة غير محددة'}
+                        propertyName={printingReceiptProperty?.name || 'عقار غير محدد'}
+                    />
                 </PrintPreviewModal>
             )}
 
@@ -608,7 +640,12 @@ const ExpensesView: React.FC<{ requestConfirm: ConfirmRequest }> = ({ requestCon
                         exportExpenseToPdf(printingExpense, db.settings);
                     }}
                 >
-                    <ExpensePrintable expense={printingExpense} settings={db.settings} />
+                    <ExpensePrintable
+                        expense={printingExpense}
+                        settings={db.settings}
+                        propertyName={db.properties.find((item) => item.id === printingExpense.propertyId)?.name || 'عقار غير محدد'}
+                        unitName={db.units.find((item) => item.id === printingExpense.unitId)?.name || db.units.find((item) => item.id === printingExpense.unitId)?.unitNumber || ''}
+                    />
                 </PrintPreviewModal>
             )}
         </div>
