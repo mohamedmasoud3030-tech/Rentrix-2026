@@ -28,7 +28,6 @@ import {
   Wallet,
   Wrench,
   X,
-  Plus,
 } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { useApp } from '../../contexts/AppContext';
@@ -150,13 +149,6 @@ const routeLabels: Record<string, string> = {
   '/hr': 'المستخدمون',
 };
 
-const quickActions: NavItem[] = [
-  { label: 'عقد جديد', path: '/contracts?new=1', icon: <FileText size={15} /> },
-  { label: 'فاتورة جديدة', path: '/invoices?new=1', icon: <Receipt size={15} /> },
-  { label: 'مهمة ميدانية', path: '/tasks?new=1', icon: <Briefcase size={15} /> },
-  { label: 'تذكرة صيانة', path: '/maintenance?new=1', icon: <Wrench size={15} /> },
-];
-
 const AppShell: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme('light'));
@@ -234,7 +226,6 @@ const AppShell: React.FC = () => {
   );
 
   const visibleBottomNavItems = useMemo(() => bottomNavItems.filter(canViewItem), [canViewItem]);
-  const visibleQuickActions = useMemo(() => quickActions.filter(canViewItem), [canViewItem]);
 
   const toggleGroup = (label: string) => {
     setCollapsedGroups((prev) => ({ ...prev, [label]: !prev[label] }));
@@ -242,7 +233,6 @@ const AppShell: React.FC = () => {
 
   const commandItems: CommandItem[] = useMemo(() => {
     const navItems = visibleNavGroups.flatMap((group) => group.items.map((item) => ({ ...item, badge: group.label })));
-    const quick = visibleQuickActions.map((item) => ({ ...item, badge: 'إجراء سريع' }));
     const extraRoutes: CommandItem[] = [
       { label: 'الأراضي', path: '/lands', icon: null as any, badge: 'العقارات' },
       { label: 'الخريطة العقارية', path: '/map', icon: null as any, badge: 'العقارات' },
@@ -252,12 +242,12 @@ const AppShell: React.FC = () => {
     ].filter(canViewItem);
 
     const deduped = new Map<string, CommandItem>();
-    [...quick, ...navItems, ...extraRoutes].forEach((item) => {
+    [...navItems, ...extraRoutes].forEach((item) => {
       if (!deduped.has(item.path)) deduped.set(item.path, item);
     });
 
     return Array.from(deduped.values());
-  }, [canViewItem, visibleNavGroups, visibleQuickActions]);
+  }, [canViewItem, visibleNavGroups]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -292,16 +282,6 @@ const AppShell: React.FC = () => {
           <button onClick={() => setIsSidebarOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-white/80 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white lg:hidden">
             <X size={18} />
           </button>
-        </div>
-
-        <div className="px-3 pt-3">
-          <div className="rounded-[24px] border border-white/90 bg-white/84 p-4 shadow-sm backdrop-blur-md dark:border-white/10 dark:bg-white/5">
-            <p className="text-[10px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500">{brand.companyName}</p>
-            <p className="mt-2 text-base font-black text-slate-900 dark:text-slate-100">{brand.reportHeaderText}</p>
-            <p className="mt-1 text-xs leading-6 text-slate-600 dark:text-slate-400">
-              {brand.tagline}
-            </p>
-          </div>
         </div>
 
         <nav className="flex-1 space-y-4 overflow-y-auto px-3 py-4">
@@ -376,16 +356,13 @@ const AppShell: React.FC = () => {
             </button>
 
             <div className="min-w-0 flex-1">
-              <div className="flex flex-col gap-3">
-                <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-                  <div className="min-w-0 space-y-1.5">
-                    <p className="text-[10px] font-extrabold tracking-[0.18em] text-slate-400 dark:text-slate-500">مسار تشغيلي موحد</p>
+              <div className="flex flex-col gap-2.5">
+                <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                  <div className="min-w-0">
                     <h2 className="truncate text-base font-black tracking-tight text-slate-950 dark:text-slate-50 sm:text-[1.05rem]">{currentLabel}</h2>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                      <span className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">مسار سريع</span>
-                      <span className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">تصفية فورية</span>
-                      <span className="rounded-full border border-slate-200/70 bg-slate-50 px-2.5 py-1 dark:border-slate-700 dark:bg-slate-800">عرض/تصدير</span>
-                    </div>
+                    <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
+                      تنقّل مركزي واضح بين الوحدات التشغيلية والمالية والتحليلية.
+                    </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2 xl:justify-end">
@@ -434,19 +411,6 @@ const AppShell: React.FC = () => {
                       </button>
                     </div>
                   </div>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  {visibleQuickActions.map((action) => (
-                    <button
-                      key={action.path}
-                      onClick={() => navigate(action.path)}
-                      className="inline-flex items-center gap-2 rounded-[18px] border border-slate-200/80 bg-[linear-gradient(135deg,rgba(15,23,42,0.96),rgba(30,41,59,0.96))] px-3.5 py-2 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-brand dark:border-slate-700 dark:bg-[linear-gradient(135deg,rgba(30,41,59,0.86),rgba(51,65,85,0.9))]"
-                    >
-                      <Plus size={14} />
-                      <span>{action.label}</span>
-                    </button>
-                  ))}
                 </div>
               </div>
             </div>
