@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
-import { AlertTriangle, Building2, Clock, DollarSign, FileText, Home, PlusCircle, Printer, Receipt, RefreshCw, Trash2, Wrench } from 'lucide-react';
+import { AlertTriangle, Building2, Clock, DollarSign, FileText, PlusCircle, Printer, Receipt, RefreshCw, Trash2, Wrench } from 'lucide-react';
 import { useApp } from '../contexts/AppContext';
-import { Contract } from '../types';
+import { Contract, Owner } from '../types';
 import Card from '../components/ui/Card';
 import Modal from '../components/ui/Modal';
 import SummaryStatCard from '../components/ui/SummaryStatCard';
@@ -39,6 +39,11 @@ type ContractRow = Contract & {
   risk: 'high' | 'medium' | 'low';
 };
 
+type OwnerAgreementDraft = {
+  ownerAgreementType: NonNullable<Contract['ownerAgreementType']>;
+  ownerAgreementValue: number;
+};
+
 const displayTenantName = (tenant: { name?: string | null; fullName?: string | null } | undefined) =>
   fixMojibake(tenant?.name || tenant?.fullName || 'مستأجر غير محدد');
 
@@ -46,10 +51,25 @@ const displayUnitName = (unit: { name?: string | null; unitNumber?: string | nul
   fixMojibake(unit?.name || unit?.unitNumber || 'وحدة غير محددة');
 
 const getContractStatusLabel = (status: Contract['status']) => {
-  if (status === 'ACTIVE') return 'نشط';
+  if (status === 'ACTIVE') return 'ساري';
   if (status === 'ENDED' || status === 'EXPIRED' || status === 'TERMINATED') return 'منتهي';
   return 'معلّق';
 };
+
+const normalizeOwnerAgreementType = (
+  value?: Contract['ownerAgreementType'] | Owner['commissionType'] | null,
+): NonNullable<Contract['ownerAgreementType']> => {
+  if (value === 'FIXED') return 'FIXED';
+  return 'PERCENTAGE';
+};
+
+const getOwnerAgreementTypeLabel = (type?: Contract['ownerAgreementType'] | null) =>
+  type === 'FIXED' ? 'عائد ثابت للمالك' : 'نسبة إدارة للمكتب';
+
+const resolveOwnerAgreementDefaults = (owner?: Owner | null, contract?: Partial<Contract> | null): OwnerAgreementDraft => ({
+  ownerAgreementType: normalizeOwnerAgreementType(contract?.ownerAgreementType || owner?.commissionType || 'PERCENTAGE'),
+  ownerAgreementValue: Number(contract?.ownerAgreementValue ?? owner?.commissionValue ?? owner?.commissionRate ?? 0),
+});
 
 const Contracts: React.FC = () => {
   const { db, dataService, contractBalances } = useApp();
@@ -58,6 +78,7 @@ const Contracts: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
+  const [agreementContract, setAgreementContract] = useState<Contract | null>(null);
   const [printingContract, setPrintingContract] = useState<Contract | null>(null);
   const [defaultUnitId, setDefaultUnitId] = useState<string | undefined>();
   const [defaultTenantId, setDefaultTenantId] = useState<string | undefined>();
@@ -103,12 +124,7 @@ const Contracts: React.FC = () => {
     const totalRent = contractRows.reduce((sum, contract) => sum + Number(contract.rent || 0), 0);
     const expiring = contractRows.filter((contract) => contract.isExpiring).length;
     const overdueBalance = contractRows.reduce((sum, contract) => sum + Math.max(contract.balance, 0), 0);
-    return {
-      active,
-      totalRent,
-      expiring,
-      overdueBalance,
-    };
+    return { active, totalRent, expiring, overdueBalance };
   }, [contractRows]);
 
   const filteredContracts = useMemo(() => {
@@ -117,13 +133,7 @@ const Contracts: React.FC = () => {
       const matchesStatus = statusFilter === 'ALL' || contract.status === statusFilter;
       if (!matchesStatus) return false;
       if (!term) return true;
-      return (
-      [contract.tenantName, contract.unitName, contract.propertyName, contract.status, contract.start, contract.end]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-        .includes(term)
-      );
+      return [contract.tenantName, contract.unitName, contract.propertyName, contract.status, contract.start, contract.end].filter(Boolean).join(' ').toLowerCase().includes(term);
     });
   }, [contractRows, searchTerm, statusFilter]);
 
@@ -142,37 +152,24 @@ const Contracts: React.FC = () => {
     const receipts = db.receipts.filter((receipt) => receipt.contractId === selectedContract.id);
     const expenses = db.expenses.filter((expense) => expense.contractId === selectedContract.id);
     const maintenance = db.maintenanceRecords.filter((record) => record.unitId === unit?.id || record.propertyId === property?.id);
-    const overdueInvoices = invoices.filter(
-      (invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now(),
-    );
-    const utilityExpenses = expenses.filter((expense) =>
-      ['كهرباء', 'مياه', 'إنترنت', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())),
-    );
-
-    const upcomingInvoices = invoices
-      .filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status))
-      .sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime())
-      .slice(0, 5);
-
-    return { unit, property, owner, tenant, invoices, receipts, expenses, maintenance, overdueInvoices, utilityExpenses, upcomingInvoices };
+    const overdueInvoices = invoices.filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status) && new Date(invoice.dueDate).getTime() < Date.now());
+    const utilityExpenses = expenses.filter((expense) => ['كهرباء', 'مياه', 'إنترنت', 'utilities', 'electricity', 'water', 'internet'].some((term) => (expense.category || '').toLowerCase().includes(term.toLowerCase())));
+    const upcomingInvoices = invoices.filter((invoice) => ['UNPAID', 'PARTIALLY_PAID', 'OVERDUE'].includes(invoice.status)).sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()).slice(0, 5);
+    const ownerAgreement = resolveOwnerAgreementDefaults(owner, selectedContract);
+    return { unit, property, owner, tenant, invoices, receipts, expenses, maintenance, overdueInvoices, utilityExpenses, upcomingInvoices, ownerAgreement };
   }, [db.expenses, db.invoices, db.maintenanceRecords, db.owners, db.properties, db.receipts, db.tenants, db.units, selectedContract]);
 
+  const agreementWorkspace = useMemo(() => {
+    if (!agreementContract) return null;
+    const unit = db.units.find((item) => item.id === agreementContract.unitId);
+    const property = unit ? db.properties.find((item) => item.id === unit.propertyId) : null;
+    const owner = property ? db.owners.find((item) => item.id === property.ownerId) : null;
+    return { unit, property, owner };
+  }, [agreementContract, db.owners, db.properties, db.units]);
+
   const activeFilterChips = [
-    ...(searchTerm ? [{ key: 'search', label: `\u0628\u062d\u062b: ${searchTerm}` }] : []),
-    ...(statusFilter !== 'ALL'
-      ? [
-          {
-            key: 'status',
-            label: `\u0627\u0644\u062d\u0627\u0644\u0629: ${
-              statusFilter === 'ACTIVE'
-                ? '\u0646\u0634\u0637'
-                : statusFilter === 'ENDED'
-                  ? '\u0645\u0646\u062a\u0647\u064a'
-                  : '\u0645\u0639\u0644\u0642'
-            }`,
-          },
-        ]
-      : []),
+    ...(searchTerm ? [{ key: 'search', label: `بحث: ${searchTerm}` }] : []),
+    ...(statusFilter !== 'ALL' ? [{ key: 'status', label: `الحالة: ${statusFilter === 'ACTIVE' ? 'ساري' : statusFilter === 'ENDED' ? 'منتهي' : 'معلّق'}` }] : []),
   ];
 
   useEffect(() => {
@@ -221,20 +218,17 @@ const Contracts: React.FC = () => {
       toast.error('لا يمكن حذف العقد لوجود حركات مالية مرتبطة به.');
       return;
     }
-
     setPendingDeleteId(contractId);
   };
 
   const confirmDelete = async () => {
     if (!pendingDeleteId) return;
-
     try {
       setIsDeleting(true);
       await dataService.remove('contracts', pendingDeleteId, { silent: true });
       toast.success('تم حذف العقد.');
-      if (selectedContractId === pendingDeleteId) {
-        setSelectedContractId('');
-      }
+      if (selectedContractId === pendingDeleteId) setSelectedContractId('');
+      if (agreementContract?.id === pendingDeleteId) setAgreementContract(null);
       setPendingDeleteId(null);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر حذف العقد.');
@@ -245,10 +239,10 @@ const Contracts: React.FC = () => {
 
   return (
     <div className="app-page page-enter" dir="rtl">
-      <PageHeader title="إدارة العقود" description="عرض وتعديل جميع عقود الإيجار وربط التحصيل والطباعة والتجديد من شاشة واحدة.">
+      <PageHeader title="إدارة العقود" description="عرض وتعديل عقود الإيجار وربط المستأجرين والوحدات والتحصيل والطباعة من شاشة واحدة.">
         <button onClick={openCreate} className={primaryButton}>
           <PlusCircle size={16} />
-          إضافة عقد
+          إضافة عقد إيجار
         </button>
       </PageHeader>
 
@@ -280,13 +274,13 @@ const Contracts: React.FC = () => {
         <SearchFilterBar
           value={searchTerm}
           onSearch={setSearchTerm}
-          placeholder={'\u0628\u062d\u062b \u0628\u0627\u0633\u0645 \u0627\u0644\u0645\u0633\u062a\u0623\u062c\u0631 \u0623\u0648 \u0627\u0644\u0648\u062d\u062f\u0629 \u0623\u0648 \u0627\u0644\u0639\u0642\u0627\u0631...'}
+          placeholder="بحث باسم المستأجر أو الوحدة أو العقار..."
           rightSlot={
             <select className={`${inputCls} min-w-[180px]`} value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as 'ALL' | Contract['status'])}>
-              <option value="ALL">{'\u0643\u0644 \u0627\u0644\u062d\u0627\u0644\u0627\u062a'}</option>
-              <option value="ACTIVE">{'\u0646\u0634\u0637'}</option>
-              <option value="ENDED">{'\u0645\u0646\u062a\u0647\u064a'}</option>
-              <option value="SUSPENDED">{'\u0645\u0639\u0644\u0642'}</option>
+              <option value="ALL">كل الحالات</option>
+              <option value="ACTIVE">ساري</option>
+              <option value="ENDED">منتهي</option>
+              <option value="SUSPENDED">معلّق</option>
             </select>
           }
           filterChips={activeFilterChips}
@@ -294,7 +288,10 @@ const Contracts: React.FC = () => {
             if (key === 'search') setSearchTerm('');
             if (key === 'status') setStatusFilter('ALL');
           }}
-          onClearAll={activeFilterChips.length ? () => { setSearchTerm(''); setStatusFilter('ALL'); } : undefined}
+          onClearAll={activeFilterChips.length ? () => {
+            setSearchTerm('');
+            setStatusFilter('ALL');
+          } : undefined}
         />
 
         {filteredContracts.length === 0 ? (
@@ -339,9 +336,7 @@ const Contracts: React.FC = () => {
                       {formatCurrency(contract.balance, currency)}
                     </Td>
                     <Td>
-                      <StatusPill status={contract.status}>
-                        {getContractStatusLabel(contract.status)}
-                      </StatusPill>
+                      <StatusPill status={contract.status}>{getContractStatusLabel(contract.status)}</StatusPill>
                     </Td>
                     <Td>
                       <div className="flex flex-wrap items-center justify-end gap-2">
@@ -363,6 +358,10 @@ const Contracts: React.FC = () => {
                         <button onClick={(event) => { event.stopPropagation(); setPrintingContract(contract); }} className={ghostButton}>
                           <Printer size={14} />
                           طباعة
+                        </button>
+                        <button onClick={(event) => { event.stopPropagation(); setAgreementContract(contract); }} className={ghostButton}>
+                          <Building2 size={14} />
+                          اتفاق المالك
                         </button>
                         <button onClick={(event) => { event.stopPropagation(); void handleDelete(contract.id); }} className={dangerButton}>
                           <Trash2 size={14} />
@@ -391,6 +390,10 @@ const Contracts: React.FC = () => {
                   <Printer size={15} />
                   طباعة العقد
                 </button>
+                <button type="button" onClick={() => setAgreementContract(selectedContract)} className={ghostButton}>
+                  <Building2 size={15} />
+                  اتفاق المالك
+                </button>
                 <button type="button" onClick={() => navigate('/financials')} className={ghostButton}>
                   <Receipt size={15} />
                   التحصيل
@@ -409,6 +412,7 @@ const Contracts: React.FC = () => {
               <div className="rounded-2xl bg-slate-50 p-4 dark:bg-slate-800/70">
                 <div className="text-xs font-bold text-slate-500 dark:text-slate-400">البيانات الأساسية</div>
                 <div className="mt-3 space-y-2 text-sm text-slate-700 dark:text-slate-200">
+                  <div><strong>رقم العقد:</strong> {selectedContract.no || '—'}</div>
                   <div><strong>المستأجر:</strong> {contractWorkspace.tenant ? displayTenantName(contractWorkspace.tenant) : '—'}</div>
                   <div><strong>الوحدة:</strong> {displayUnitName(contractWorkspace.unit || undefined)}</div>
                   <div><strong>العقار:</strong> {contractWorkspace.property?.name || '—'}</div>
@@ -423,6 +427,29 @@ const Contracts: React.FC = () => {
                   <div><strong>المصروفات:</strong> {formatCurrency(contractWorkspace.expenses.reduce((sum, item) => sum + Number(item.amount || 0), 0), currency)}</div>
                   <div><strong>التأمين:</strong> {formatCurrency(selectedContract.deposit || 0, currency)}</div>
                 </div>
+              </div>
+            </div>
+
+            <div className="mt-4 rounded-2xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <div className="text-xs font-bold text-blue-700 dark:text-blue-200">اتفاق المالك والمكتب</div>
+                  <div className="mt-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">
+                    {getOwnerAgreementTypeLabel(contractWorkspace.ownerAgreement.ownerAgreementType)}
+                  </div>
+                  <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                    {contractWorkspace.ownerAgreement.ownerAgreementType === 'FIXED'
+                      ? formatCurrency(contractWorkspace.ownerAgreement.ownerAgreementValue, currency)
+                      : `${toArabicDigits(String(contractWorkspace.ownerAgreement.ownerAgreementValue || 0))}%`}
+                  </div>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    هذا الاتفاق منفصل عن بيانات عقد الإيجار، ويمكن تعديله من نموذج مستقل بدون خلطه ببيانات المستأجر والوحدة.
+                  </p>
+                </div>
+                <button type="button" onClick={() => setAgreementContract(selectedContract)} className={ghostButton}>
+                  <Building2 size={15} />
+                  تعديل الاتفاق
+                </button>
               </div>
             </div>
 
@@ -542,6 +569,16 @@ const Contracts: React.FC = () => {
         contract={editingContract}
         defaultUnitId={defaultUnitId}
         defaultTenantId={defaultTenantId}
+        onManageOwnerAgreement={(currentContract) => setAgreementContract(currentContract)}
+      />
+
+      <OwnerAgreementForm
+        isOpen={!!agreementContract}
+        onClose={() => setAgreementContract(null)}
+        contract={agreementContract}
+        owner={agreementWorkspace?.owner || null}
+        propertyName={fixMojibake(agreementWorkspace?.property?.name || '—')}
+        unitName={displayUnitName(agreementWorkspace?.unit || undefined)}
       />
 
       {printingContract && (
@@ -585,20 +622,32 @@ const ContractForm: React.FC<{
   contract: Contract | null;
   defaultUnitId?: string;
   defaultTenantId?: string;
-}> = ({ isOpen, onClose, contract, defaultUnitId, defaultTenantId }) => {
+  onManageOwnerAgreement: (contract: Contract) => void;
+}> = ({ isOpen, onClose, contract, defaultUnitId, defaultTenantId, onManageOwnerAgreement }) => {
   const { db, dataService } = useApp();
-  const [data, setData] = useState<Partial<Omit<Contract, 'id' | 'createdAt'>>>({});
+  const [data, setData] = useState<Partial<Omit<Contract, 'id' | 'createdAt' | 'updatedAt'>>>({});
 
   const availableUnits = useMemo(
     () => db.units.filter((unit) => !db.contracts.some((item) => item.unitId === unit.id && item.status === 'ACTIVE' && item.id !== contract?.id)),
-    [contract?.id, db.contracts, db.units]
+    [contract?.id, db.contracts, db.units],
   );
   const hasAvailableUnits = availableUnits.length > 0 || !!contract;
   const hasTenants = db.tenants.length > 0;
   const selectedUnit = useMemo(() => db.units.find((unit) => unit.id === data.unitId) || null, [data.unitId, db.units]);
+  const selectedProperty = useMemo(
+    () => db.properties.find((property) => property.id === selectedUnit?.propertyId) || null,
+    [db.properties, selectedUnit?.propertyId],
+  );
+  const selectedOwner = useMemo(
+    () => db.owners.find((owner) => owner.id === selectedProperty?.ownerId) || null,
+    [db.owners, selectedProperty?.ownerId],
+  );
+  const selectedOwnerAgreement = useMemo(() => resolveOwnerAgreementDefaults(selectedOwner, data), [data, selectedOwner]);
 
   useEffect(() => {
     const today = new Date().toISOString().slice(0, 10);
+    if (!isOpen) return;
+
     if (contract) {
       setData(contract);
       return;
@@ -608,46 +657,61 @@ const ContractForm: React.FC<{
     const endDate = new Date(startDate);
     endDate.setFullYear(startDate.getFullYear() + 1);
 
+    const initialUnitId = defaultUnitId || availableUnits[0]?.id || '';
+    const initialUnit = db.units.find((unit) => unit.id === initialUnitId) || null;
+    const initialProperty = db.properties.find((property) => property.id === initialUnit?.propertyId) || null;
+    const initialOwner = db.owners.find((owner) => owner.id === initialProperty?.ownerId) || null;
+    const ownerAgreementDefaults = resolveOwnerAgreementDefaults(initialOwner, null);
+
     setData({
-      unitId: defaultUnitId || availableUnits[0]?.id || '',
+      unitId: initialUnitId,
       tenantId: (defaultTenantId && db.tenants.some((tenant) => tenant.id === defaultTenantId) ? defaultTenantId : db.tenants[0]?.id) || '',
-      rent: 0,
+      rent: Number(initialUnit?.rentDefault || initialUnit?.expectedRent || 0),
       dueDay: 1,
       start: today,
       end: endDate.toISOString().slice(0, 10),
       deposit: 0,
       status: 'ACTIVE',
-      ownerAgreementType: 'PERCENTAGE',
-      ownerAgreementValue: 10,
+      ownerAgreementType: ownerAgreementDefaults.ownerAgreementType,
+      ownerAgreementValue: ownerAgreementDefaults.ownerAgreementValue,
       notes: '',
     });
-  }, [availableUnits, contract, db.tenants, defaultTenantId, defaultUnitId, isOpen]);
+  }, [availableUnits, contract, db.owners, db.properties, db.tenants, db.units, defaultTenantId, defaultUnitId, isOpen]);
+
+  useEffect(() => {
+    if (!isOpen || contract || !data.unitId) return;
+
+    const unit = db.units.find((item) => item.id === data.unitId) || null;
+    const property = db.properties.find((item) => item.id === unit?.propertyId) || null;
+    const owner = db.owners.find((item) => item.id === property?.ownerId) || null;
+    const defaults = resolveOwnerAgreementDefaults(owner, null);
+
+    setData((current) => ({
+      ...current,
+      rent: current.rent && current.rent > 0 ? current.rent : Number(unit?.rentDefault || unit?.expectedRent || 0),
+      ownerAgreementType: defaults.ownerAgreementType,
+      ownerAgreementValue: defaults.ownerAgreementValue,
+    }));
+  }, [contract, data.unitId, db.owners, db.properties, db.units, isOpen]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
     setData((current) => ({
       ...current,
-      [name]: ['rent', 'dueDay', 'deposit', 'ownerAgreementValue'].includes(name) ? Number(value) : value,
+      [name]: ['rent', 'dueDay', 'deposit'].includes(name) ? Number(value) : value,
     }));
   };
 
   const handleStartDateChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const start = event.target.value;
     if (!start) {
-      setData((current) => ({
-        ...current,
-        start: '',
-        end: '',
-      }));
+      setData((current) => ({ ...current, start: '', end: '' }));
       return;
     }
 
     const nextEnd = new Date(start);
     if (Number.isNaN(nextEnd.getTime())) {
-      setData((current) => ({
-        ...current,
-        start,
-      }));
+      setData((current) => ({ ...current, start }));
       return;
     }
 
@@ -661,30 +725,31 @@ const ContractForm: React.FC<{
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+
     if (!hasAvailableUnits) {
       toast.error('لا توجد وحدات متاحة حاليًا لإنشاء عقد جديد.');
       return;
     }
-
     if (!hasTenants) {
       toast.error('لا يوجد مستأجرون مسجلون. أضف مستأجرًا أولًا ثم أنشئ العقد.');
       return;
     }
-
     if (!data.unitId || !data.tenantId || !data.start || !data.end) {
       toast.error('يرجى تعبئة الحقول الأساسية للعقد.');
       return;
     }
-
     if (new Date(data.end).getTime() <= new Date(data.start).getTime()) {
       toast.error('يجب أن يكون تاريخ نهاية العقد بعد تاريخ البداية.');
       return;
     }
 
     try {
-      if (contract) await dataService.update('contracts', contract.id, data, { silent: true });
-      else await dataService.add('contracts', data, { silent: true });
-      toast.success(contract ? 'تم تحديث العقد بنجاح.' : 'تم تسجيل العقد بنجاح.');
+      if (contract) {
+        await dataService.update('contracts', contract.id, data, { silent: true });
+      } else {
+        await dataService.add('contracts', data, { silent: true });
+      }
+      toast.success(contract ? 'تم تحديث العقد بنجاح.' : 'تم تسجيل عقد الإيجار بنجاح.');
       onClose();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'تعذر حفظ بيانات العقد.');
@@ -692,53 +757,57 @@ const ContractForm: React.FC<{
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={contract ? 'تعديل العقد' : 'إضافة عقد جديد'}>
+    <Modal isOpen={isOpen} onClose={onClose} title={contract ? 'تعديل عقد الإيجار' : 'تسجيل عقد إيجار جديد'} size="lg">
       <form onSubmit={handleSubmit} className="space-y-4">
-        {!hasAvailableUnits && (
-          <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
-            لا توجد وحدات شاغرة متاحة لإضافة عقد جديد الآن. قم بإنهاء عقد قائم أو أضف وحدة جديدة ثم أعد المحاولة.
+        {!hasAvailableUnits && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-800 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">لا توجد وحدات شاغرة متاحة لإضافة عقد جديد الآن. قم بإنهاء عقد قائم أو أضف وحدة جديدة ثم أعد المحاولة.</div>}
+        {!hasTenants && <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">لا يمكن إنشاء عقد بدون مستأجر. أضف مستأجرًا أولًا من شاشة المستأجرين أو العملاء المحتملين.</div>}
+
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-sm font-extrabold text-slate-800 dark:text-slate-100">بيانات عقد الإيجار</div>
+              <p className="mt-1 text-xs leading-6 text-slate-500 dark:text-slate-400">هذا النموذج مخصص فقط لربط المستأجر بالوحدة وتحديد قيمة الإيجار ومدة العقد والتأمين. اتفاق المالك والمكتب له نموذج مستقل منفصل.</p>
+            </div>
+            {contract ? (
+              <button type="button" onClick={() => { onClose(); onManageOwnerAgreement(contract); }} className={ghostButton}>
+                <Building2 size={15} />
+                فتح نموذج اتفاق المالك
+              </button>
+            ) : (
+              <div className="rounded-2xl bg-white/80 px-3 py-2 text-xs text-slate-500 shadow-sm dark:bg-slate-950/80 dark:text-slate-400">سيتم اعتماد اتفاق المالك الافتراضي من بيانات المالك، ويمكن تعديله لاحقًا بعد حفظ العقد.</div>
+            )}
           </div>
-        )}
-        {!hasTenants && (
-          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-800 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-200">
-            لا يمكن إنشاء عقد بدون مستأجر. أضف مستأجرًا أولًا من شاشة المستأجرين أو العملاء المحتملين.
-          </div>
-        )}
+        </div>
+
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className={labelCls}>الوحدة</label>
             <select className={inputCls} name="unitId" value={data.unitId || ''} onChange={handleChange} required disabled={!hasAvailableUnits && !contract}>
               {!contract && !availableUnits.length && <option value="">لا توجد وحدات متاحة</option>}
               {contract && !availableUnits.some((item) => item.id === contract.unitId) && (
-                <option value={contract.unitId}>
-                  {db.units.find((item) => item.id === contract.unitId)?.name || 'الوحدة الحالية'}
-                </option>
+                <option value={contract.unitId}>{displayUnitName(db.units.find((item) => item.id === contract.unitId) || undefined)}</option>
               )}
               {availableUnits.map((unit) => (
                 <option key={unit.id} value={unit.id}>
-                  {unit.name} ({db.properties.find((property) => property.id === unit.propertyId)?.name || 'عقار غير محدد'})
+                  {displayUnitName(unit)} ({fixMojibake(db.properties.find((property) => property.id === unit.propertyId)?.name || 'عقار غير محدد')})
                 </option>
               ))}
             </select>
-            {selectedUnit && (
-              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
-                العقار: {fixMojibake(db.properties.find((property) => property.id === selectedUnit.propertyId)?.name || 'عقار غير محدد')}
-              </p>
-            )}
+            {selectedUnit && <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">العقار: {fixMojibake(selectedProperty?.name || 'عقار غير محدد')}</p>}
           </div>
+
           <div>
             <label className={labelCls}>المستأجر</label>
             <select className={inputCls} name="tenantId" value={data.tenantId || ''} onChange={handleChange} required disabled={!hasTenants}>
               {!db.tenants.length && <option value="">لا يوجد مستأجرون مسجلون</option>}
               {db.tenants.map((tenant) => (
-                <option key={tenant.id} value={tenant.id}>
-                  {displayTenantName(tenant)}
-                </option>
+                <option key={tenant.id} value={tenant.id}>{displayTenantName(tenant)}</option>
               ))}
             </select>
           </div>
+
           <div>
-            <label className={labelCls}>الإيجار</label>
+            <label className={labelCls}>الإيجار الشهري</label>
             <input className={inputCls} name="rent" type="number" value={data.rent ?? 0} onChange={handleChange} required />
           </div>
           <div>
@@ -746,11 +815,11 @@ const ContractForm: React.FC<{
             <input className={inputCls} name="dueDay" type="number" min="1" max="28" value={data.dueDay ?? 1} onChange={handleChange} required />
           </div>
           <div>
-            <label className={labelCls}>بداية العقد</label>
+            <label className={labelCls}>تاريخ البداية</label>
             <input className={inputCls} name="start" type="date" value={data.start || ''} onChange={handleStartDateChange} required />
           </div>
           <div>
-            <label className={labelCls}>نهاية العقد</label>
+            <label className={labelCls}>تاريخ النهاية</label>
             <input className={inputCls} name="end" type="date" value={data.end || ''} onChange={handleChange} required />
           </div>
           <div>
@@ -760,44 +829,134 @@ const ContractForm: React.FC<{
           <div>
             <label className={labelCls}>الحالة</label>
             <select className={inputCls} name="status" value={data.status || 'ACTIVE'} onChange={handleChange}>
-              <option value="ACTIVE">نشط</option>
+              <option value="ACTIVE">ساري</option>
               <option value="ENDED">منتهي</option>
               <option value="SUSPENDED">معلّق</option>
             </select>
           </div>
-          <div>
-            <label className={labelCls}>نوع اتفاق المالك</label>
-            <select className={inputCls} name="ownerAgreementType" value={data.ownerAgreementType || 'PERCENTAGE'} onChange={handleChange}>
-              <option value="PERCENTAGE">نسبة إدارة</option>
-              <option value="FIXED">استثمار ثابت</option>
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>قيمة الاتفاق</label>
-            <input
-              className={inputCls}
-              name="ownerAgreementValue"
-              type="number"
-              value={data.ownerAgreementValue ?? 0}
-              onChange={handleChange}
-              placeholder={data.ownerAgreementType === 'FIXED' ? 'مبلغ الاستثمار الشهري' : 'نسبة الإدارة %'}
-            />
-          </div>
           <div className="md:col-span-2">
-            <label className={labelCls}>ملاحظات</label>
+            <label className={labelCls}>ملاحظات العقد</label>
             <textarea className={`${inputCls} min-h-[110px]`} name="notes" value={data.notes || ''} onChange={handleChange} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-blue-700 dark:text-blue-200">اتفاق المالك الحالي</div>
+              <div className="mt-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">{getOwnerAgreementTypeLabel(selectedOwnerAgreement.ownerAgreementType)}</div>
+              <div className="mt-1 text-sm text-slate-600 dark:text-slate-300">
+                {selectedOwnerAgreement.ownerAgreementType === 'FIXED'
+                  ? formatCurrency(selectedOwnerAgreement.ownerAgreementValue, db.settings?.currency || 'OMR')
+                  : `${toArabicDigits(String(selectedOwnerAgreement.ownerAgreementValue || 0))}%`}
+              </div>
+            </div>
+            <div className="text-xs leading-6 text-slate-500 dark:text-slate-400">
+              {selectedOwner ? `تم سحب هذا الاتفاق من بيانات المالك ${fixMojibake(selectedOwner.name || '—')}.` : 'سيتم تحديد الاتفاق حسب المالك المرتبط بالوحدة المختارة.'}
+            </div>
           </div>
         </div>
 
         {contract && <AttachmentsManager entityType="CONTRACT" entityId={contract.id} />}
 
         <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
-          <button type="button" onClick={onClose} className={ghostButton}>
-            إلغاء
-          </button>
-          <button type="submit" className={primaryButton} disabled={!hasAvailableUnits || !hasTenants}>
-            حفظ العقد
-          </button>
+          <button type="button" onClick={onClose} className={ghostButton}>إلغاء</button>
+          <button type="submit" className={primaryButton} disabled={!hasAvailableUnits || !hasTenants}>حفظ العقد</button>
+        </div>
+      </form>
+    </Modal>
+  );
+};
+
+const OwnerAgreementForm: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  contract: Contract | null;
+  owner: Owner | null;
+  propertyName: string;
+  unitName: string;
+}> = ({ isOpen, onClose, contract, owner, propertyName, unitName }) => {
+  const { dataService } = useApp();
+  const [draft, setDraft] = useState<OwnerAgreementDraft>({
+    ownerAgreementType: 'PERCENTAGE',
+    ownerAgreementValue: 0,
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isOpen || !contract) return;
+    setDraft(resolveOwnerAgreementDefaults(owner, contract));
+  }, [contract, isOpen, owner]);
+
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!contract) return;
+
+    try {
+      setIsSaving(true);
+      await dataService.update(
+        'contracts',
+        contract.id,
+        {
+          ownerAgreementType: draft.ownerAgreementType,
+          ownerAgreementValue: Number(draft.ownerAgreementValue || 0),
+        },
+        { silent: true },
+      );
+      toast.success('تم تحديث اتفاق المالك والمكتب.');
+      onClose();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'تعذر حفظ اتفاق المالك.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <Modal isOpen={isOpen} onClose={onClose} title="اتفاق المالك والمكتب" size="md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
+          <div className="grid grid-cols-1 gap-3 text-sm text-slate-700 dark:text-slate-200 sm:grid-cols-2">
+            <div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">المالك</div>
+              <div className="mt-1 font-bold">{fixMojibake(owner?.name || 'غير محدد')}</div>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">الوحدة</div>
+              <div className="mt-1 font-bold">{unitName}</div>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">العقار</div>
+              <div className="mt-1 font-bold">{propertyName}</div>
+            </div>
+            <div>
+              <div className="text-xs font-bold text-slate-500 dark:text-slate-400">رقم العقد</div>
+              <div className="mt-1 font-bold">{contract?.no || '—'}</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div>
+            <label className={labelCls}>نوع الاتفاق</label>
+            <select className={inputCls} value={draft.ownerAgreementType} onChange={(event) => setDraft((current) => ({ ...current, ownerAgreementType: event.target.value as OwnerAgreementDraft['ownerAgreementType'] }))}>
+              <option value="PERCENTAGE">نسبة إدارة للمكتب</option>
+              <option value="FIXED">عائد ثابت للمالك</option>
+            </select>
+          </div>
+          <div>
+            <label className={labelCls}>{draft.ownerAgreementType === 'FIXED' ? 'قيمة العائد الثابت' : 'نسبة الإدارة %'}</label>
+            <input className={inputCls} type="number" min={0} value={draft.ownerAgreementValue} onChange={(event) => setDraft((current) => ({ ...current, ownerAgreementValue: Number(event.target.value) }))} placeholder={draft.ownerAgreementType === 'FIXED' ? 'مثال: 300' : 'مثال: 10'} />
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-blue-100 bg-blue-50/80 p-4 text-xs leading-6 text-blue-800 dark:border-blue-500/20 dark:bg-blue-500/10 dark:text-blue-200">
+          هذا النموذج خاص باتفاق المالك مع المكتب فقط، وتم فصله عن نموذج عقد الإيجار حتى لا تختلط بيانات المستأجر والوحدة مع آلية توزيع العائد.
+        </div>
+
+        <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
+          <button type="button" onClick={onClose} className={ghostButton} disabled={isSaving}>إلغاء</button>
+          <button type="submit" className={primaryButton} disabled={isSaving || !contract}>حفظ الاتفاق</button>
         </div>
       </form>
     </Modal>
@@ -805,8 +964,3 @@ const ContractForm: React.FC<{
 };
 
 export default Contracts;
-
-
-
-
-
