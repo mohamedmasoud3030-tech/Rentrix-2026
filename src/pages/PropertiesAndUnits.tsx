@@ -11,6 +11,7 @@ import StatusPill from '../components/ui/StatusPill';
 import TableWrapper, { Td, Th, Tr } from '../components/ui/TableWrapper';
 import SearchFilterBar from '../components/shared/SearchFilterBar';
 import AttachmentsManager from '../components/shared/AttachmentsManager';
+import FormSection from '../components/ui/FormSection';
 import { formatCurrency, formatDate } from '../utils/helpers';
 
 const propertyTypeLabels: Record<string, string> = {
@@ -801,7 +802,7 @@ const PropertiesAndUnits: React.FC = () => {
 
       <Modal isOpen={propertyModalOpen} onClose={() => setPropertyModalOpen(false)} title={editingProperty ? 'تعديل بيانات العقار' : 'إضافة عقار جديد'} size="lg">
         <form className="space-y-5" onSubmit={handlePropertySubmit}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormSection title="الهوية التشغيلية" description="البيانات الأساسية التي تعرّف العقار داخل المحفظة.">
             <div>
               <label className={labelCls}>اسم العقار</label>
               <input className={inputCls} value={propertyForm.name} onChange={(event) => setPropertyForm((current) => ({ ...current, name: event.target.value }))} required />
@@ -831,23 +832,27 @@ const PropertiesAndUnits: React.FC = () => {
               <label className={labelCls}>إجمالي الوحدات</label>
               <input className={inputCls} type="number" min="0" value={propertyForm.totalUnits} onChange={(event) => setPropertyForm((current) => ({ ...current, totalUnits: event.target.value }))} />
             </div>
-            <div>
-              <label className={labelCls}>المدينة</label>
-              <input className={inputCls} value={propertyForm.city} onChange={(event) => setPropertyForm((current) => ({ ...current, city: event.target.value }))} />
+          </FormSection>
+          <FormSection title="الموقع والوصف" description="تفاصيل الموقع والوصف الداخلي الذي يظهر للفريق أثناء الإدارة." columns={1}>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className={labelCls}>المدينة</label>
+                <input className={inputCls} value={propertyForm.city} onChange={(event) => setPropertyForm((current) => ({ ...current, city: event.target.value }))} />
+              </div>
+              <div>
+                <label className={labelCls}>الحي / المنطقة</label>
+                <input className={inputCls} value={propertyForm.district} onChange={(event) => setPropertyForm((current) => ({ ...current, district: event.target.value }))} />
+              </div>
             </div>
             <div>
-              <label className={labelCls}>الحي / المنطقة</label>
-              <input className={inputCls} value={propertyForm.district} onChange={(event) => setPropertyForm((current) => ({ ...current, district: event.target.value }))} />
+              <label className={labelCls}>العنوان</label>
+              <input className={inputCls} value={propertyForm.address} onChange={(event) => setPropertyForm((current) => ({ ...current, address: event.target.value }))} />
             </div>
-          </div>
-          <div>
-            <label className={labelCls}>العنوان</label>
-            <input className={inputCls} value={propertyForm.address} onChange={(event) => setPropertyForm((current) => ({ ...current, address: event.target.value }))} />
-          </div>
-          <div>
-            <label className={labelCls}>الوصف</label>
-            <textarea className={`${inputCls} min-h-[110px]`} value={propertyForm.description} onChange={(event) => setPropertyForm((current) => ({ ...current, description: event.target.value }))} />
-          </div>
+            <div>
+              <label className={labelCls}>الوصف</label>
+              <textarea className={`${inputCls} min-h-[110px]`} value={propertyForm.description} onChange={(event) => setPropertyForm((current) => ({ ...current, description: event.target.value }))} />
+            </div>
+          </FormSection>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
             <button type="button" onClick={() => setPropertyModalOpen(false)} className={`${actionButtonCls} ${ghostButtonCls}`}>
               إلغاء
@@ -861,7 +866,7 @@ const PropertiesAndUnits: React.FC = () => {
 
       <Modal isOpen={unitModalOpen} onClose={() => setUnitModalOpen(false)} title={editingUnit ? 'تعديل بيانات الوحدة' : 'إضافة وحدة جديدة'} size="lg">
         <form className="space-y-5" onSubmit={handleUnitSubmit}>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <FormSection title="البيانات الأساسية" description="تعريف الوحدة وربطها بالعقار والحالة التشغيلية الحالية.">
             <div>
               <label className={labelCls}>العقار</label>
               <select className={inputCls} value={unitForm.propertyId} onChange={(event) => setUnitForm((current) => ({ ...current, propertyId: event.target.value }))} required>
@@ -895,6 +900,8 @@ const PropertiesAndUnits: React.FC = () => {
                 <option value="MAINTENANCE">تحت الصيانة</option>
               </select>
             </div>
+          </FormSection>
+          <FormSection title="المساحة والتسعير" description="تفاصيل الدور والمساحة والإيجار المتوقع للمراجعة السريعة.">
             <div>
               <label className={labelCls}>الدور</label>
               <input className={inputCls} type="number" value={unitForm.floor} onChange={(event) => setUnitForm((current) => ({ ...current, floor: event.target.value }))} />
@@ -915,11 +922,13 @@ const PropertiesAndUnits: React.FC = () => {
               <label className={labelCls}>الإيجار المتوقع</label>
               <input className={inputCls} type="number" min="0" step="0.001" value={unitForm.expectedRent} onChange={(event) => setUnitForm((current) => ({ ...current, expectedRent: event.target.value }))} />
             </div>
-          </div>
-          <div>
-            <label className={labelCls}>ملاحظات</label>
-            <textarea className={`${inputCls} min-h-[110px]`} value={unitForm.notes} onChange={(event) => setUnitForm((current) => ({ ...current, notes: event.target.value }))} />
-          </div>
+          </FormSection>
+          <FormSection title="ملاحظات الوحدة" description="أي تفاصيل تشغيلية أو وصف داخلي يحتاجه الفريق." columns={1}>
+            <div>
+              <label className={labelCls}>ملاحظات</label>
+              <textarea className={`${inputCls} min-h-[110px]`} value={unitForm.notes} onChange={(event) => setUnitForm((current) => ({ ...current, notes: event.target.value }))} />
+            </div>
+          </FormSection>
           <div className="flex justify-end gap-3 border-t border-slate-100 pt-4 dark:border-slate-800">
             <button type="button" onClick={() => setUnitModalOpen(false)} className={`${actionButtonCls} ${ghostButtonCls}`}>
               إلغاء
